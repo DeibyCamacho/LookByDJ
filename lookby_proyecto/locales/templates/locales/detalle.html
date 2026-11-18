@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{{ local.nombre }} | LookBy{% endblock %}
+{% block content %}
+<h2>{{ local.nombre }}{% if not local.activo %} (desactivado){% endif %}</h2>
+<p>{{ local.descripcion }}</p>
+<p><strong>Dirección:</strong> {{ local.direccion }}, {{ local.ciudad }}</p>
+{% if local.telefono %}<p><strong>Teléfono:</strong> {{ local.telefono }}</p>{% endif %}
+{% if local.latitud is not None %}
+  <p><strong>Coordenadas:</strong> {{ local.latitud }}, {{ local.longitud }}</p>
+{% endif %}
+{% if puede_admin %}
+  <p>
+    <a href="{% url 'locales:editar' local.pk %}">Editar</a> |
+    <a href="{% url 'locales:desactivar' local.pk %}">Desactivar</a>
+  </p>
+{% endif %}
+<p><a href="{% url 'locales:lista' %}">Volver al listado</a></p>
+{% endblock %}

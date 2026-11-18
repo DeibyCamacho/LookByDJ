@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'usuarios',
+    'locales',
 ]
 
 MIDDLEWARE = [
@@ -53,12 +55,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Modelo de usuario propio (debe definirse antes de la primera migración)
+AUTH_USER_MODEL = 'usuarios.Usuario'
+LOGIN_URL = 'usuarios:entrar'
+LOGIN_REDIRECT_URL = 'usuarios:perfil'
+LOGOUT_REDIRECT_URL = 'locales:lista'
+
 ROOT_URLCONF = 'lookby_proyecto.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
