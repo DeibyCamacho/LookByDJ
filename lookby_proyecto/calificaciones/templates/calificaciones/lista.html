@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Calificaciones | LookBy{% endblock %}
+{% block content %}
+<h2>Calificaciones</h2>
+<ul>
+  {% for calificacion in calificaciones %}
+    <li>{{ calificacion.cliente }} | {{ calificacion.puntuacion }}/5 | {{ calificacion.comentario }}</li>
+  {% empty %}
+    <li>Aún no hay calificaciones.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

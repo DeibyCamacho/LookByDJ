@@ -1,0 +1,170 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LookBy | Encuentra tu estilo</title>
+
+    <link rel="stylesheet" href="{% static 'inicio/css/home.css' %}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <main class="page-container">
+
+        <div class="main-card">
+
+            <!-- NAVEGACIÓN -->
+            <header class="navbar">
+
+                <a href="{% url 'inicio:home' %}" class="logo">
+                    LOOK<span>BY.</span>
+                </a>
+
+                <nav class="nav-links">
+                    <a href="{% url 'servicios:lista' %}">Servicios</a>
+                    <a href="{% url 'profesionales:lista' %}">Profesionales</a>
+                    <a href="{% url 'servicios:lista' %}">Precios</a>
+                    <a href="#contacto">Contacto</a>
+                </nav>
+
+                <div class="nav-actions">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'usuarios:perfil' %}" class="btn-start">Mi perfil</a>
+                    {% else %}
+                        <a href="{% url 'usuarios:entrar' %}" class="btn-start">Iniciar sesión</a>
+                    {% endif %}
+                </div>
+
+            </header>
+
+
+            <!-- CONTENIDO PRINCIPAL -->
+            <section class="hero" id="servicios">
+
+                <!-- IMAGEN IZQUIERDA -->
+                <div class="hero-left">
+
+                    <div class="back-button">
+                        <span>↶</span>
+                    </div>
+
+                    <div class="hero-image">
+                        <img
+                            src="{% static 'inicio/img/portada.svg' %}"
+                            alt="Profesional de belleza"
+                        >
+                    </div>
+
+                    <div class="image-label">
+                        <span>LOOKBY EXPERIENCE</span>
+                        <p>Descubre tu mejor versión.</p>
+                    </div>
+
+                </div>
+
+
+                <!-- TEXTO DERECHA -->
+                <div class="hero-right">
+
+                    <span class="small-heading">
+                        TU ESTILO, NUESTRA INSPIRACIÓN
+                    </span>
+
+                    <h1>
+                        CONECTA CON<br>
+                        LOS MEJORES<br>
+                        <span>PROFESIONALES</span><br>
+                        DE TU ESTILO.
+                    </h1>
+
+                    <div class="separator"></div>
+
+                    <p class="description">
+                        Descubre profesionales de belleza, barberías,
+                        peluquerías, tatuadores y mucho más.
+                        Compara servicios, conoce establecimientos
+                        y encuentra el profesional ideal para ti.
+                    </p>
+
+
+                    <!-- BOTONES -->
+                    <div class="hero-buttons">
+
+                        <a href="{% url 'servicios:lista' %}" class="btn-primary">
+                            Explorar servicios
+                            <span>→</span>
+                        </a>
+
+                        <a href="{% url 'profesionales:lista' %}" class="btn-secondary">
+                            Encontrar profesionales
+                        </a>
+
+                    </div>
+
+
+                    <!-- ESTADÍSTICAS -->
+                    <div class="hero-bottom">
+
+                        <div class="statistics">
+
+                            <div class="stat-item">
+                                <p>Establecimientos</p>
+                                <h2>+500</h2>
+                            </div>
+
+                            <div class="stat-item">
+                                <p>Profesionales</p>
+                                <h2>+1.2K</h2>
+                            </div>
+
+                        </div>
+
+
+                        <!-- TARJETA DECORATIVA -->
+                        <div class="floating-card">
+
+                            <div class="card-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+
+                            <p>
+                                DESCUBRE NUEVOS ESTILOS,
+                                ENCUENTRA PROFESIONALES
+                                Y RESERVA TU PRÓXIMA
+                                EXPERIENCIA.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="footer" id="contacto">
+        <p>
+            © 2026 LOOKBY.
+            Todos los derechos reservados.
+        </p>
+    </footer>
+
+</body>
+</html>

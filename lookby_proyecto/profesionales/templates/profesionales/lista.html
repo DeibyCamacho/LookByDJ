@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Profesionales | LookBy{% endblock %}
+{% block content %}
+<h2>Profesionales</h2>
+<ul>
+  {% for profesional in profesionales %}
+    <li>{{ profesional.usuario.nombre_completo }} {% if profesional.domicilio %}(a domicilio){% endif %}</li>
+  {% empty %}
+    <li>Aún no hay profesionales registrados.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

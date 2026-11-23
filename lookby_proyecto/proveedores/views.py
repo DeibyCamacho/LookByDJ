@@ -1,3 +1,7 @@
 from django.shortcuts import render
+from .models import Proveedor
 
-# Create your views here.
+
+def lista_proveedores(request):
+    proveedores = Proveedor.objects.all()
+    return render(request, 'proveedores/lista.html', {'proveedores': proveedores})

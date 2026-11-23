@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'calificaciones',
     'mapas',
     'catalogos',
+    'inicio',
 ]
 
 MIDDLEWARE = [

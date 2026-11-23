@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Mapa | LookBy{% endblock %}
+{% block content %}
+<h2>Mapa de locales</h2>
+<p>Datos de la vista <code>VW_MAPA_LOCALES</code>. Endpoint JSON: <a href="{% url 'mapas:api_locales' %}">/mapas/api/locales/</a></p>
+<ul>
+  {% for local in locales %}
+    <li>{{ local.nombre }} - {{ local.direccion }} ({{ local.latitud }}, {{ local.longitud }}) - {{ local.calificacion }}</li>
+  {% empty %}
+    <li>No hay datos del mapa todavía.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

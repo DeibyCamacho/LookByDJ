@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Servicios | LookBy{% endblock %}
+{% block content %}
+<h2>Servicios y precios</h2>
+<ul>
+  {% for oferta in ofertas %}
+    <li>
+      {{ oferta.servicio.nombre }} - {{ oferta.profesional.usuario.nombre_completo }}
+      {% if oferta.local %}({{ oferta.local.nombre }}){% endif %}
+      | ${{ oferta.precio }} | {{ oferta.duracion }} min
+    </li>
+  {% empty %}
+    <li>Aún no hay ofertas activas.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
