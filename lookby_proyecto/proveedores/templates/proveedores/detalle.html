@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del proveedor | LookBy</title>
+</head>
+<body>
+
+    <h1>Información del proveedor</h1>
+
+    <p><strong>ID:</strong> {{ proveedor.idProveedor }}</p>
+
+    <p><strong>Nombre:</strong> {{ proveedor.nombre }}</p>
+
+    <p><strong>Teléfono:</strong> {{ proveedor.telefono }}</p>
+
+    <p><strong>Correo:</strong> {{ proveedor.correo }}</p>
+
+    <br>
+
+    <a href="{% url 'editar_proveedor' proveedor.idProveedor %}">Editar proveedor</a>
+
+    <br><br>
+
+    <a href="{% url 'listar_proveedores' %}">Volver al listado</a>
+
+</body>
+</html>

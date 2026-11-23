@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar proveedor | LookBy</title>
+</head>
+<body>
+
+    <h1>Eliminar proveedor</h1>
+
+    <p>¿Estás segura de que deseas eliminar este proveedor?</p>
+
+    <p><strong>Nombre:</strong> {{ proveedor.nombre }}</p>
+    <p><strong>Teléfono:</strong> {{ proveedor.telefono }}</p>
+    <p><strong>Correo:</strong> {{ proveedor.correo }}</p>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <button type="submit">Sí, eliminar</button>
+        <a href="{% url 'listar_proveedores' %}">Cancelar</a>
+    </form>
+
+</body>
+</html>

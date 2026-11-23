@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de proveedores | LookBy</title>
+</head>
+<body>
+
+    <h1>
+        {% if proveedor and proveedor.pk %}
+            Editar proveedor
+        {% else %}
+            Registrar proveedor
+        {% endif %}
+    </h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <label for="nombre">Nombre del proveedor:</label>
+        <input
+            type="text"
+            id="nombre"
+            name="nombre"
+            value="{{ proveedor.nombre|default:'' }}"
+            required
+        >
+
+        <br><br>
+
+        <label for="telefono">Teléfono:</label>
+        <input
+            type="tel"
+            id="telefono"
+            name="telefono"
+            value="{{ proveedor.telefono|default:'' }}"
+            minlength="10"
+            maxlength="12"
+            pattern="[0-9]{10,12}"
+            title="El teléfono debe tener entre 10 y 12 dígitos numéricos."
+            placeholder="Ej: 3001234567"
+            required
+        >
+
+        <br>
+
+        <small>Ingresa entre 10 y 12 dígitos, sin espacios ni guiones.</small>
+
+        {% if error %}
+            <p style="color: red;">
+                {{ error }}
+            </p>
+        {% endif %}
+
+        <br><br>
+
+        <label for="correo">Correo electrónico:</label>
+        <input
+            type="email"
+            id="correo"
+            name="correo"
+            value="{{ proveedor.correo|default:'' }}"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">
+            {% if proveedor and proveedor.pk %}
+                Guardar cambios
+            {% else %}
+                Registrar proveedor
+            {% endif %}
+        </button>
+    </form>
+
+    <br>
+
+    <a href="{% url 'listar_proveedores' %}">Volver al listado</a>
+
+</body>
+</html>

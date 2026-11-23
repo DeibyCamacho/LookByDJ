@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proveedores | LookBy</title>
+</head>
+<body>
+
+    <h1>Gestión de proveedores</h1>
+
+    <a href="{% url 'crear_proveedor' %}">Registrar proveedor</a>
+
+    <hr>
+
+    {% if proveedores %}
+        <table border="1" cellpadding="10">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Correo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for proveedor in proveedores %}
+                    <tr>
+                        <td>{{ proveedor.idProveedor }}</td>
+                        <td>{{ proveedor.nombre }}</td>
+                        <td>{{ proveedor.telefono }}</td>
+                        <td>{{ proveedor.correo }}</td>
+                        <td>
+                            <a href="{% url 'detalle_proveedor' proveedor.idProveedor %}">Ver</a>
+                            <a href="{% url 'editar_proveedor' proveedor.idProveedor %}">Editar</a>
+                            <a href="{% url 'eliminar_proveedor' proveedor.idProveedor %}">Eliminar</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay proveedores registrados.</p>
+    {% endif %}
+
+</body>
+</html>
