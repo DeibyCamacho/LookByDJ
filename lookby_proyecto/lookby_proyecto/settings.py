@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'proveedores',
     'calificaciones',
     'mapas',
+    'catalogos',
 ]
 
 MIDDLEWARE = [

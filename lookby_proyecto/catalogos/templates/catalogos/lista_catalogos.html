@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Catálogos | LookBy</title>
+</head>
+<body>
+    <h1>Catálogos de LookBy</h1>
+    <ul>
+        {% for catalogo in catalogos %}
+            <li><strong>{{ catalogo.nombre }}</strong> - {{ catalogo.local.nombre }}</li>
+        {% empty %}
+            <li>Aún no hay catálogos registrados.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

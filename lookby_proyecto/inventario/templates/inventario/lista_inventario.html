@@ -90,9 +90,9 @@
                     <tr>
                         <td><strong>{{ item.producto.nombre }}</strong></td>
                         <td>{{ item.local }}</td>
-                        <td>{{ item.cantidad }} unidades</td>
+                        <td>{{ item.stock_actual }} unidades</td>
                         <td>
-                            {% if item.cantidad > 5 %}
+                            {% if item.stock_actual > 5 %}
                                 <span class="badge stock-ok">Disponible</span>
                             {% else %}
                                 <span class="badge stock-bajo">Stock Bajo</span>

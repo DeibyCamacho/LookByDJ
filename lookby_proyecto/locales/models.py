@@ -20,6 +20,16 @@ class Local(models.Model):
     )
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    # MER: LOCAL.idUsuario FK (dueño del local). Se conserva además la M2M
+    # 'administradores' para cumplir la regla del manual de varios administradores.
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='locales',
+        db_column='idUsuario',
+        null=True,
+        blank=True,
+    )
     administradores = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='locales_administrados',
