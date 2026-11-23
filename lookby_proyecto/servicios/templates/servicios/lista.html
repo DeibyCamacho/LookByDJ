@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Servicios | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Servicios y precios</h2>
 <ul>
   {% for oferta in ofertas %}
@@ -13,4 +14,5 @@
     <li>Aún no hay ofertas activas.</li>
   {% endfor %}
 </ul>
+</div>
 {% endblock %}

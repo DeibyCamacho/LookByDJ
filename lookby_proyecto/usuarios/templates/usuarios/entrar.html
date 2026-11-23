@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Entrar | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Iniciar sesión</h2>
 <form method="post" novalidate>
   {% csrf_token %}
   {{ form.as_p }}
   <input type="hidden" name="next" value="{{ next }}">
-  <button type="submit">Entrar</button>
+  <div class="acciones">
+    <button type="submit">Entrar</button>
+    <a class="btn-secundario" href="{% url 'usuarios:registro' %}">Crear cuenta</a>
+  </div>
 </form>
-<p>¿No tienes cuenta? <a href="{% url 'usuarios:registro' %}">Regístrate</a></p>
+</div>
 {% endblock %}

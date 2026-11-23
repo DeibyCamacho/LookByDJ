@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Proveedores | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Proveedores</h2>
 <ul>
   {% for proveedor in proveedores %}
@@ -9,4 +10,5 @@
     <li>Aún no hay proveedores registrados.</li>
   {% endfor %}
 </ul>
+</div>
 {% endblock %}

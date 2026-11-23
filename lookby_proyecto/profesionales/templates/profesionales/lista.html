@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Profesionales | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Profesionales</h2>
 <ul>
   {% for profesional in profesionales %}
@@ -9,4 +10,5 @@
     <li>Aún no hay profesionales registrados.</li>
   {% endfor %}
 </ul>
+</div>
 {% endblock %}

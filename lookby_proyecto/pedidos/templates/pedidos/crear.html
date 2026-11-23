@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Nuevo pedido | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Nuevo pedido</h2>
 <p>El total se calcula automáticamente con el precio del local y se descuenta el stock.</p>
 <form method="post">
   {% csrf_token %}
   {{ form.as_p }}
-  <button type="submit">Confirmar pedido</button>
+  <div class="acciones">
+    <button type="submit">Confirmar pedido</button>
+    <a class="btn-secundario" href="{% url 'lista_pedidos' %}">Volver a pedidos</a>
+  </div>
 </form>
-<p><a href="{% url 'lista_pedidos' %}">← Volver a pedidos</a></p>
+</div>
 {% endblock %}

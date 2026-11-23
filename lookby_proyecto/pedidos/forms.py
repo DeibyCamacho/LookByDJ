@@ -18,7 +18,15 @@ class CrearPedidoForm(forms.Form):
         label='Producto disponible',
         empty_label='Selecciona un producto',
     )
-    cantidad = forms.IntegerField(label='Cantidad', min_value=1, initial=1)
+    cantidad = forms.IntegerField(
+        label='Cantidad',
+        min_value=1,
+        initial=1,
+        widget=forms.NumberInput(attrs={'min': '1', 'step': '1'}),
+    )
     direccion_entrega = forms.CharField(
-        label='Dirección de entrega', max_length=255, required=False,
+        label='Dirección de entrega',
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Ej. Calle 50 # 43-20'}),
     )

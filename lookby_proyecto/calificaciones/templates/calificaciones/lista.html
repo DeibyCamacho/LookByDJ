@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Calificaciones | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Calificaciones</h2>
 {% if user.is_authenticated %}
   <p><a href="{% url 'calificaciones:crear' %}">+ Dejar una calificación</a></p>
@@ -12,4 +13,5 @@
     <li>Aún no hay calificaciones.</li>
   {% endfor %}
 </ul>
+</div>
 {% endblock %}

@@ -9,18 +9,30 @@ class RegistroForm(forms.ModelForm):
     password1 = forms.CharField(
         label='Contraseña',
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-        help_text=password_validation.password_validators_help_text_html(),
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'new-password',
+            'placeholder': 'Mínimo 8 caracteres',
+        }),
+        help_text='Usa al menos 8 caracteres; evita datos personales y contraseñas comunes.',
     )
     password2 = forms.CharField(
         label='Confirmar contraseña',
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'new-password',
+            'placeholder': 'Repite tu contraseña',
+        }),
     )
 
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'correo', 'telefono']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'placeholder': 'Tu nombre'}),
+            'apellido': forms.TextInput(attrs={'placeholder': 'Tu apellido'}),
+            'correo': forms.EmailInput(attrs={'placeholder': 'tu@correo.com'}),
+            'telefono': forms.TextInput(attrs={'placeholder': '3001234567'}),
+        }
 
     def clean_correo(self):
         correo = self.cleaned_data['correo'].strip().lower()
@@ -57,12 +69,19 @@ class RegistroForm(forms.ModelForm):
 class LoginForm(AuthenticationForm):
     username = forms.EmailField(
         label='Correo electrónico',
-        widget=forms.EmailInput(attrs={'autofocus': True, 'autocomplete': 'email'}),
+        widget=forms.EmailInput(attrs={
+            'autofocus': True,
+            'autocomplete': 'email',
+            'placeholder': 'tu@correo.com',
+        }),
     )
     password = forms.CharField(
         label='Contraseña',
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'current-password',
+            'placeholder': 'Tu contraseña',
+        }),
     )
 
     error_messages = {

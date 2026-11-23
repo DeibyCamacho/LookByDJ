@@ -7,7 +7,11 @@ class CalificacionForm(forms.ModelForm):
         model = Calificacion
         fields = ['local', 'profesional', 'puntuacion', 'comentario']
         widgets = {
-            'comentario': forms.Textarea(attrs={'rows': 4}),
+            'puntuacion': forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'comentario': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Cuéntanos cómo fue tu experiencia...',
+            }),
         }
         labels = {
             'puntuacion': 'Puntuación (1 a 5)',

@@ -140,6 +140,30 @@ body {
     color: white;
 }
 
+.logout-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.btn-salir {
+    background: transparent;
+    color: var(--gray);
+    border: 1px solid #D5D0D8;
+    border-radius: 30px;
+    padding: 13px 18px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-salir:hover {
+    background: #F3E9FC;
+    color: var(--purple-dark);
+    border-color: var(--purple);
+}
+
 
 /* =================================
    HERO PRINCIPAL
@@ -651,53 +675,104 @@ body {
 }
 
 .contenido form {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.94);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 22px;
-    max-width: 680px;
+    border-radius: 16px;
+    padding: 26px 28px;
+    max-width: 720px;
+    box-shadow: 0 12px 32px rgba(81, 34, 143, 0.07);
 }
 
 .contenido form p {
     display: grid;
-    gap: 6px;
-    margin-bottom: 14px;
+    gap: 7px;
+    margin: 0 0 18px;
 }
 
 .contenido form label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--black);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--purple-dark);
 }
 
-.contenido form input,
+.contenido form input:not([type="hidden"]),
 .contenido form select,
 .contenido form textarea {
     font-family: inherit;
     font-size: 14px;
     color: var(--black);
     padding: 11px 13px;
+    min-height: 44px;
     border: 1px solid #D8D2DF;
     border-radius: 9px;
     background: white;
     width: 100%;
-    max-width: 520px;
+    max-width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.contenido form input:focus,
+.contenido form select:focus,
+.contenido form textarea:focus {
+    outline: none;
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(135, 61, 224, 0.13);
+}
+
+.contenido form textarea {
+    resize: vertical;
+    min-height: 96px;
 }
 
 .contenido form input[type="checkbox"] {
-    width: auto;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    accent-color: var(--purple);
 }
 
-.contenido form .helptext,
-.contenido form .errorlist {
+.contenido form .helptext {
+    display: block;
     font-size: 12px;
+    line-height: 1.5;
     color: var(--gray);
 }
 
-.contenido form .errorlist {
-    color: #B42318;
+.contenido form .helptext ul {
+    margin: 6px 0 0 18px;
+    list-style: disc;
+}
+
+.contenido form .helptext li {
+    background: none;
+    border: 0;
+    padding: 1px 0;
+    color: var(--gray);
+    font-size: 12px;
+}
+
+.contenido form .errorlist,
+.contenido form .errorlist li {
     list-style: none;
+    margin: 0;
     padding: 0;
+    background: none;
+    border: 0;
+    color: #B42318;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.contenido form .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
 }
 
 .contenido button,
@@ -716,12 +791,24 @@ body {
     transition: 0.3s;
 }
 
+.contenido .btn-secundario {
+    background: transparent;
+    color: var(--purple-dark);
+    border: 1px solid #D8D2DF;
+    padding: 12px 22px;
+}
+
 .contenido button:hover,
 .contenido .btn-accion:hover {
     background: var(--purple);
     transform: translateY(-2px);
     color: white;
     text-decoration: none;
+}
+
+.contenido .btn-secundario:hover {
+    background: #F3E9FC;
+    color: var(--purple-dark);
 }
 
 .contenido table {
