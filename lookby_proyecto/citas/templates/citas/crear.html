@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Reservar cita | LookBy{% endblock %}
+{% block content %}
+<h2>Reservar una cita</h2>
+<p>La duración y el precio se toman del servicio elegido.</p>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Reservar</button>
+</form>
+<p><a href="{% url 'citas:lista' %}">← Volver a mis citas</a></p>
+{% endblock %}

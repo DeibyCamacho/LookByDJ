@@ -2,6 +2,9 @@
 {% block title %}Calificaciones | LookBy{% endblock %}
 {% block content %}
 <h2>Calificaciones</h2>
+{% if user.is_authenticated %}
+  <p><a href="{% url 'calificaciones:crear' %}">+ Dejar una calificación</a></p>
+{% endif %}
 <ul>
   {% for calificacion in calificaciones %}
     <li>{{ calificacion.cliente }} | {{ calificacion.puntuacion }}/5 | {{ calificacion.comentario }}</li>

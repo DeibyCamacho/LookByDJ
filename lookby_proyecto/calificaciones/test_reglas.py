@@ -43,3 +43,22 @@ class CalificacionTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 self.calificacion(4).save()
+
+    def test_formulario_web_crea_calificacion(self):
+        self.client.force_login(self.cliente)
+        response = self.client.post('/calificaciones/crear/', {
+            'local': self.local.pk,
+            'puntuacion': 5,
+            'comentario': 'Muy buen servicio',
+        })
+        self.assertRedirects(response, '/calificaciones/')
+        self.assertEqual(Calificacion.objects.count(), 1)
+
+    def test_formulario_rechaza_sin_local_ni_profesional(self):
+        self.client.force_login(self.cliente)
+        response = self.client.post('/calificaciones/crear/', {
+            'puntuacion': 5,
+            'comentario': 'Sin objetivo',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'solo uno')

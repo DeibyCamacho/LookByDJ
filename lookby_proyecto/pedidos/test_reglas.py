@@ -8,6 +8,7 @@ from locales.models import Local
 from productos.models import Producto
 from usuarios.models import Usuario
 
+from .models import Pedido
 from .services import crear_pedido
 
 
@@ -53,3 +54,16 @@ class CrearPedidoTests(TestCase):
     def test_rechaza_pedido_vacio(self):
         with self.assertRaises(ValidationError):
             crear_pedido(self.cliente, self.local, items=[])
+
+    def test_formulario_web_crea_pedido(self):
+        self.client.force_login(self.cliente)
+        response = self.client.post('/pedidos/crear/', {
+            'local': self.local.pk,
+            'inventario': self.inventario.pk,
+            'cantidad': 2,
+            'direccion_entrega': 'Calle 5 # 6-7',
+        })
+        self.assertRedirects(response, '/pedidos/', fetch_redirect_response=False)
+        self.assertEqual(Pedido.objects.count(), 1)
+        self.inventario.refresh_from_db()
+        self.assertEqual(self.inventario.stock_actual, 8)

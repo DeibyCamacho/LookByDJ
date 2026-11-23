@@ -8,6 +8,7 @@ from profesionales.models import Profesional
 from servicios.models import OfertaServicio, Servicio
 from usuarios.models import Usuario
 
+from .models import Cita
 from .services import crear_cita
 
 
@@ -50,3 +51,12 @@ class CrearCitaTests(TestCase):
                 self.cliente, self.oferta, self.inicio,
                 self.inicio + timedelta(minutes=30),
             )
+
+    def test_formulario_web_reserva_cita(self):
+        self.client.force_login(self.cliente)
+        response = self.client.post('/citas/crear/', {
+            'oferta': self.oferta.pk,
+            'fecha_inicio': '2026-11-26T11:00',
+        })
+        self.assertRedirects(response, '/citas/')
+        self.assertEqual(Cita.objects.count(), 1)

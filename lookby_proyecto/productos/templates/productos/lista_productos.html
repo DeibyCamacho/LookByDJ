@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Productos - LookBy</title>
-    <style>
+{% extends 'base.html' %}
+{% block title %}Catálogo de Productos - LookBy{% endblock %}
+{% block extra_head %}
+<style>
         :root {
             --primary-color: #d946ef;
             --primary-dark: #c026d3;
@@ -158,22 +155,11 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
         }
     </style>
-</head>
-<body>
-
-    <!-- Barra de navegación superior inspirada en LookBy -->
-    <header>
-        <div class="logo">
-            Lotus <span>LookBy</span>
-        </div>
-        <nav>
-            <a href="#">Inicio</a>
-            <a href="#" class="active">Productos</a>
-            <a href="#">Profesionales</a>
-            <a href="#">Locales</a>
-            <a href="#">Contacto</a>
-        </nav>
-    </header>
+{% endblock %}
+{% block content %}
+<div class="contenido">
+<!-- Barra de navegación superior inspirada en LookBy -->
+    
 
     <!-- Contenido principal -->
     <div class="container">
@@ -203,6 +189,5 @@
             {% endfor %}
         </div>
     </div>
-
-</body>
-</html>
+</div>
+{% endblock %}

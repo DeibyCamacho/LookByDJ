@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Calificar | LookBy{% endblock %}
+{% block content %}
+<h2>Calificar un local o profesional</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Enviar calificación</button>
+</form>
+<p><a href="{% url 'calificaciones:lista' %}">← Volver a calificaciones</a></p>
+{% endblock %}

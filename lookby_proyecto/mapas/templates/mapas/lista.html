@@ -1,13 +1,53 @@
 {% extends 'base.html' %}
-{% block title %}Mapa | LookBy{% endblock %}
+{% block title %}Mapa de locales | LookBy{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #mapa-lookby { height: 460px; width: 100%; border-radius: 16px; border: 1px solid var(--border); margin: 18px 0; }
+</style>
+{% endblock %}
 {% block content %}
-<h2>Mapa de locales</h2>
-<p>Datos de la vista <code>VW_MAPA_LOCALES</code>. Endpoint JSON: <a href="{% url 'mapas:api_locales' %}">/mapas/api/locales/</a></p>
-<ul>
-  {% for local in locales %}
-    <li>{{ local.nombre }} - {{ local.direccion }} ({{ local.latitud }}, {{ local.longitud }}) - {{ local.calificacion }}</li>
-  {% empty %}
-    <li>No hay datos del mapa todavía.</li>
-  {% endfor %}
-</ul>
+<div class="contenido">
+  <h2>Mapa de locales</h2>
+  <p>Locales publicados desde la vista <code>VW_MAPA_LOCALES</code>, con OpenStreetMap.</p>
+
+  <div id="mapa-lookby"></div>
+
+  <ul>
+    {% for local in locales %}
+      <li><strong>{{ local.nombre }}</strong> - {{ local.direccion }} - ⭐ {{ local.calificacion }}</li>
+    {% empty %}
+      <li>No hay datos del mapa todavía.</li>
+    {% endfor %}
+  </ul>
+
+  <p><a href="{% url 'mapas:api_locales' %}">Ver datos en JSON</a></p>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const mapa = L.map('mapa-lookby').setView([6.2518, -75.5636], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 18
+  }).addTo(mapa);
+
+  fetch('{% url "mapas:api_locales" %}')
+    .then(r => r.json())
+    .then(data => {
+      const puntos = [];
+      data.locales.forEach(local => {
+        const lat = Number(local.latitud);
+        const lng = Number(local.longitud);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          L.marker([lat, lng])
+            .addTo(mapa)
+            .bindPopup('<strong>' + local.nombre + '</strong><br>' + local.direccion + '<br>⭐ ' + local.calificacion);
+          puntos.push([lat, lng]);
+        }
+      });
+      if (puntos.length) mapa.fitBounds(puntos, { padding: [40, 40] });
+    });
+</script>
 {% endblock %}

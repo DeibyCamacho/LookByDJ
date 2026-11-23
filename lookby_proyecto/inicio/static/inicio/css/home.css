@@ -577,6 +577,214 @@ body {
 
 
 /* =================================
+   PÁGINAS INTERNAS (MISMO DISEÑO)
+================================= */
+
+.contenido {
+    flex: 1;
+    padding: 10px 0 30px;
+}
+
+.contenido h2 {
+    font-size: clamp(26px, 3vw, 36px);
+    font-weight: 500;
+    letter-spacing: -1.2px;
+    color: var(--black);
+    margin-bottom: 12px;
+}
+
+.contenido h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 22px 0 10px;
+    color: var(--purple-dark);
+}
+
+.contenido p {
+    color: var(--gray);
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 14px;
+}
+
+.contenido a {
+    color: var(--purple);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.contenido a:hover {
+    text-decoration: underline;
+}
+
+.contenido ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.contenido ul li {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: var(--black);
+}
+
+.mensajes {
+    list-style: none;
+    margin-bottom: 18px;
+    display: grid;
+    gap: 8px;
+}
+
+.mensajes li {
+    background: #EAF6FF;
+    border: 1px solid #BFE0F5;
+    color: var(--purple-dark);
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.contenido form {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    max-width: 680px;
+}
+
+.contenido form p {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.contenido form label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--black);
+}
+
+.contenido form input,
+.contenido form select,
+.contenido form textarea {
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--black);
+    padding: 11px 13px;
+    border: 1px solid #D8D2DF;
+    border-radius: 9px;
+    background: white;
+    width: 100%;
+    max-width: 520px;
+}
+
+.contenido form input[type="checkbox"] {
+    width: auto;
+}
+
+.contenido form .helptext,
+.contenido form .errorlist {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.contenido form .errorlist {
+    color: #B42318;
+    list-style: none;
+    padding: 0;
+}
+
+.contenido button,
+.contenido .btn-accion {
+    background: var(--black);
+    color: white;
+    border: 0;
+    border-radius: 30px;
+    padding: 13px 24px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: 0.3s;
+}
+
+.contenido button:hover,
+.contenido .btn-accion:hover {
+    background: var(--purple);
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.contenido table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    font-size: 13px;
+}
+
+.contenido th {
+    background: #F3E9FC;
+    color: var(--purple-dark);
+    text-align: left;
+    padding: 13px 16px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.contenido td {
+    padding: 13px 16px;
+    border-top: 1px solid var(--border);
+    color: var(--black);
+}
+
+.contenido tr:hover td {
+    background: #FBF8FE;
+}
+
+.badge {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #F3E9FC;
+    color: var(--purple-dark);
+}
+
+.badge.ok {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.badge.warn {
+    background: #FEF3C7;
+    color: #B45309;
+}
+
+@media (max-width: 700px) {
+    .contenido form,
+    .contenido form input,
+    .contenido form select,
+    .contenido form textarea {
+        max-width: 100%;
+    }
+}
+
+
+/* =================================
    PANTALLAS PEQUEÑAS
 ================================= */
 
