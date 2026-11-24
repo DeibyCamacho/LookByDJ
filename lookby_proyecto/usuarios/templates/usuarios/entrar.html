@@ -1,16 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}Entrar | LookBy{% endblock %}
 {% block content %}
-<div class="contenido">
-<h2>Iniciar sesión</h2>
-<form method="post" novalidate>
-  {% csrf_token %}
-  {{ form.as_p }}
-  <input type="hidden" name="next" value="{{ next }}">
-  <div class="acciones">
-    <button type="submit">Entrar</button>
-    <a class="btn-secundario" href="{% url 'usuarios:registro' %}">Crear cuenta</a>
+<div class="contenido contenido-acceso">
+  <div class="tarjeta-acceso">
+    <h2>Iniciar sesión</h2>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="acciones">
+        <button type="submit">Entrar</button>
+        <a class="btn-secundario" href="{% url 'usuarios:registro' %}">Crear cuenta</a>
+      </div>
+    </form>
   </div>
-</form>
 </div>
 {% endblock %}
