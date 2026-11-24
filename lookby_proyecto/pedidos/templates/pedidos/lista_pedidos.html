@@ -1,108 +1,43 @@
 {% extends 'base.html' %}
 {% block title %}Gestión de Pedidos - LookBy{% endblock %}
-{% block extra_head %}
-<style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #fafafa;
-            color: #27272a;
-            margin: 0;
-            padding: 0;
-        }
-        header {
-            background: white;
-            border-bottom: 1px solid #e4e4e7;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-size: 24px; font-weight: bold; color: #111; }
-        .logo span { color: #e11d48; }
-        nav a { text-decoration: none; color: #52525b; margin: 0 15px; font-weight: 500; }
-        nav a.active { color: #e11d48; border-bottom: 2px solid #e11d48; padding-bottom: 4px; }
-        
-        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
-        h2 {
-            font-size: 26px;
-            margin-bottom: 25px;
-            color: #18181b;
-            border-left: 4px solid #e11d48;
-            padding-left: 12px;
-        }
-        .table-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            overflow: hidden;
-            border: 1px solid #f1f1f5;
-        }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th {
-            background-color: #f4f4f5;
-            padding: 16px 20px;
-            font-size: 13px;
-            text-transform: uppercase;
-            color: #52525b;
-            letter-spacing: 0.5px;
-        }
-        td { padding: 16px 20px; border-top: 1px solid #f4f4f5; font-size: 15px; }
-        tr:hover { background-color: #fafafa; }
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .estado-pendiente { background: #fef3c7; color: #b45309; }
-        .estado-completado { background: #dcfce7; color: #166534; }
-    </style>
-{% endblock %}
 {% block content %}
 <div class="contenido">
-<div class="container">
-        <h2>Historial de Pedidos y Órdenes</h2>
-        <p><a href="{% url 'pedidos:crear' %}">+ Nuevo pedido</a></p>
-        <div class="table-card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID Pedido</th>
-                        <th>Fecha / Estado</th>
-                        <th>Total</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for pedido in pedidos %}
-                    <tr>
-                        <td>
-                            <strong>#{{ pedido.id }}</strong><br>
-                            <small>{{ pedido.cliente }} &middot; {{ pedido.local }}</small>
-                        </td>
-                        <td>
-                            <span class="badge estado-pendiente">{{ pedido.estado|default:"Registrado" }}</span>
-                            <br><small>{{ pedido.fecha_creacion|date:"d/m/Y H:i" }}</small>
-                        </td>
-                        <td>${{ pedido.total|default:"0.00" }}</td>
-                        <td>
-                            <a href="{% url 'pedidos:detalle' pk=pedido.pk %}" style="color: #e11d48; text-decoration: none; font-weight: 600;">Ver detalles</a>
-                            {% if pedido.estado != 'CANCELADO' and pedido.estado != 'ENTREGADO' %}
-                              <br><a href="{% url 'pedidos:editar' pk=pedido.pk %}">Editar dirección</a>
-                              <br><a href="{% url 'pedidos:eliminar' pk=pedido.pk %}">Cancelar pedido</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: #71717a;">
-                            No hay pedidos registrados todavía. Crea una orden desde el panel de administración.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+  <h2>Historial de pedidos y órdenes</h2>
+  <p><a class="btn-accion" href="{% url 'pedidos:crear' %}">+ Nuevo pedido</a></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID pedido</th>
+        <th>Fecha / Estado</th>
+        <th>Total</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pedido in pedidos %}
+        <tr>
+          <td>
+            <strong>#{{ pedido.id }}</strong><br>
+            <small>{{ pedido.cliente }} &middot; {{ pedido.local }}</small>
+          </td>
+          <td>
+            <span class="badge {% if pedido.estado == 'ENTREGADO' or pedido.estado == 'COMPLETADO' %}ok{% else %}warn{% endif %}">{{ pedido.estado|default:"Registrado" }}</span>
+            <br><small>{{ pedido.fecha_creacion|date:"d/m/Y H:i" }}</small>
+          </td>
+          <td>${{ pedido.total|default:"0.00" }}</td>
+          <td>
+            <a href="{% url 'pedidos:detalle' pk=pedido.pk %}"><strong>Ver detalles</strong></a>
+            {% if pedido.estado != 'CANCELADO' and pedido.estado != 'ENTREGADO' %}
+              <br><a href="{% url 'pedidos:editar' pk=pedido.pk %}">Editar dirección</a>
+              <br><a href="{% url 'pedidos:eliminar' pk=pedido.pk %}">Cancelar pedido</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">No hay pedidos registrados todavía. Crea una orden desde el panel de administración.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

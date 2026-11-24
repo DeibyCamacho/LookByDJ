@@ -1,207 +1,54 @@
 {% extends 'base.html' %}
 {% load permisos %}
-{% block title %}Catálogo de Productos - LookBy{% endblock %}
-{% block extra_head %}
-<style>
-        :root {
-            --primary-color: #d946ef;
-            --primary-dark: #c026d3;
-            --dark-bg: #18181b;
-            --text-color: #27272a;
-            --gray-light: #f4f4f5;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #fafafa;
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-        }
-        /* Navbar superior estético */
-        header {
-            background: white;
-            border-bottom: 1px solid #e4e4e7;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo span { color: #e11d48; }
-        nav a {
-            text-decoration: none;
-            color: #52525b;
-            margin: 0 15px;
-            font-weight: 500;
-        }
-        nav a.active { color: #e11d48; border-bottom: 2px solid #e11d48; padding-bottom: 4px; }
-        
-        /* Contenedor principal */
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        h2 {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            color: #18181b;
-            border-left: 4px solid #e11d48;
-            padding-left: 12px;
-        }
-
-        /* Cuadrícula de productos (Grid) */
-        .grid-productos {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 25px;
-        }
-        .card {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            border: 1px solid #f1f1f5;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-        }
-        .card-img-placeholder {
-            height: 160px;
-            background: linear-gradient(135deg, #fbcfe8, #f43f5e);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .card-body {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-        .tag {
-            background: #ffe4e6;
-            color: #e11d48;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 4px 10px;
-            border-radius: 20px;
-            width: fit-content;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-        .card-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #18181b;
-            margin: 0 0 8px 0;
-        }
-        .card-desc {
-            font-size: 13px;
-            color: #71717a;
-            margin-bottom: 20px;
-            flex-grow: 1;
-            line-height: 1.4;
-        }
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px solid #f4f4f5;
-            padding-top: 15px;
-        }
-        .price {
-            font-size: 18px;
-            font-weight: bold;
-            color: #111;
-        }
-        .btn-reservar {
-            background-color: #e11d48;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            text-decoration: none;
-            font-size: 13px;
-        }
-        .btn-reservar:hover {
-            background-color: #be123c;
-        }
-        .empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px;
-            background: white;
-            border-radius: 16px;
-            color: #71717a;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        }
-    </style>
-{% endblock %}
+{% block title %}Catálogo de productos | LookBy{% endblock %}
 {% block content %}
 <div class="contenido">
-<!-- Barra de navegación superior inspirada en LookBy -->
-    
+  <h2>Catálogo de productos</h2>
+  <p>Productos disponibles con sus precios por local.</p>
 
-    <!-- Contenido principal -->
-    <div class="container">
-        <h2>Catálogo de Productos y Artículos</h2>
-
-        <div class="grid-productos">
-            {% for p in productos %}
-                <div class="card">
-                    <div class="card-img-placeholder">
-                        {{ p.nombre|slice:":2"|upper }}
-                    </div>
-                    <div class="card-body">
-                        <span class="tag">{{ p.categoria }}</span>
-                        <h3 class="card-title">{{ p.nombre }}</h3>
-                        <p class="card-desc">{{ p.descripcion }}</p>
-                        <div class="card-footer">
-                            <span class="price">
-                                {% for inv in p.inventarios.all %}
-                                    ${{ inv.precio_venta }} <small>({{ inv.local.nombre }})</small>{% if not forloop.last %}<br>{% endif %}
-                                {% empty %}
-                                    <small>Sin precio registrado</small>
-                                {% endfor %}
-                            </span>
-                            <a class="btn-reservar" href="{% url 'pedidos:crear' %}?producto={{ p.pk }}">Solicitar</a>
-                        </div>
-                        {% if user|es_admin %}
-                        <p class="card-acciones">
-                            <a href="{% url 'productos:detalle' p.pk %}">Detalle</a> |
-                            <a href="{% url 'productos:editar' p.pk %}">Editar</a> |
-                            <a href="{% url 'productos:eliminar' p.pk %}">Desactivar</a>
-                        </p>
-                        {% endif %}
-                    </div>
-                </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Categoría</th>
+        <th>Descripción</th>
+        <th>Precios por local</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in productos %}
+        <tr>
+          <td>
+            <strong>{{ p.nombre }}</strong>
+            {% if not p.activo %}<span class="badge warn">Desactivado</span>{% endif %}
+          </td>
+          <td>{{ p.categoria|default:"Sin categoría" }}</td>
+          <td>{{ p.descripcion|default:"—" }}</td>
+          <td>
+            {% for inv in p.inventarios.all %}
+              ${{ inv.precio_venta }} <small>({{ inv.local.nombre }})</small>{% if not forloop.last %}<br>{% endif %}
             {% empty %}
-                <div class="empty-state">
-                    <h3>No hay productos registrados todavía</h3>
-                    <p>Agrega nuevos artículos desde el panel de administración para visualizarlos aquí.</p>
-                </div>
+              <small>Sin precio registrado</small>
             {% endfor %}
-        </div>
-    </div>
+          </td>
+          <td>
+            <a class="btn-accion" href="{% url 'pedidos:crear' %}?producto={{ p.pk }}">Solicitar</a>
+            <a href="{% url 'productos:detalle' p.pk %}">Detalle</a>
+            {% if user|es_admin %}
+              <a href="{% url 'productos:editar' p.pk %}">Editar</a> |
+              <a href="{% url 'productos:eliminar' p.pk %}">Desactivar</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No hay productos registrados todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if user|es_admin %}
+    <p><a class="btn-accion" href="{% url 'productos:crear' %}">+ Nuevo producto</a></p>
+  {% endif %}
 </div>
 {% endblock %}

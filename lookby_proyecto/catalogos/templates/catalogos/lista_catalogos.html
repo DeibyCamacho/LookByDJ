@@ -1,19 +1,42 @@
 {% extends 'base.html' %}
+{% load permisos %}
 {% block title %}Catálogos | LookBy{% endblock %}
 {% block content %}
 <div class="contenido">
-<h1>Catálogos de LookBy</h1>
-<p><a href="{% url 'catalogos:crear' %}">Nuevo catálogo</a></p>
-    <ul>
-        {% for catalogo in catalogos %}
-            <li>
-                <a href="{% url 'catalogos:detalle' catalogo.pk %}"><strong>{{ catalogo.nombre }}</strong></a>
-                - {{ catalogo.local.nombre }}
-                - {{ catalogo.productos.count }} producto(s)
-            </li>
-        {% empty %}
-            <li>Aún no hay catálogos registrados.</li>
-        {% endfor %}
-    </ul>
+  <h2>Catálogos de LookBy</h2>
+  <p>Listado de catálogos publicados por local.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Catálogo</th>
+        <th>Local</th>
+        <th>Productos</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for catalogo in catalogos %}
+        <tr>
+          <td><strong>{{ catalogo.nombre }}</strong></td>
+          <td>{{ catalogo.local.nombre }}</td>
+          <td>{{ catalogo.productos.count }}</td>
+          <td>
+            <a href="{% url 'catalogos:detalle' catalogo.pk %}">Ver detalle</a>
+            {% if user|es_admin %}
+              | <a href="{% url 'catalogos:editar' catalogo.pk %}">Editar</a>
+              | <a href="{% url 'catalogos:eliminar' catalogo.pk %}">Eliminar</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Aún no hay catálogos registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if user|es_admin %}
+    <p><a class="btn-accion" href="{% url 'catalogos:crear' %}">+ Nuevo catálogo</a></p>
+  {% endif %}
 </div>
 {% endblock %}
