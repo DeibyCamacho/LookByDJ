@@ -6,6 +6,11 @@ from django.contrib.auth.models import (
 from django.db import models
 
 
+# Longitud máxima para nombres y apellidos de personas.
+# 40 caracteres cubre nombres compuestos y apellidos dobles sin saturar la BD.
+LONGITUD_MAXIMA_NOMBRE = 40
+
+
 class Rol(models.Model):
     """Rol de un usuario. Una persona puede tener varios (tabla intermedia)."""
 
@@ -58,8 +63,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     """Usuario de LookBy. Inicia sesión con el correo."""
 
     correo = models.EmailField('correo electrónico', unique=True)
-    nombre = models.CharField(max_length=100)
-    apellido = models.CharField(max_length=100, blank=True)
+    nombre = models.CharField(max_length=LONGITUD_MAXIMA_NOMBRE)
+    apellido = models.CharField(max_length=LONGITUD_MAXIMA_NOMBRE, blank=True)
     telefono = models.CharField('teléfono', max_length=30, blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField('activo', default=True)

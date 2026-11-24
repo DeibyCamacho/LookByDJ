@@ -16,8 +16,9 @@ WHERE l."activo" = TRUE AND l."latitud" IS NOT NULL AND l."longitud" IS NOT NULL
 GROUP BY l.id, l.nombre, l.direccion, l.latitud, l.longitud;
 """
 
-SQL_SQLITE = """
-DROP VIEW IF EXISTS vw_mapa_locales;
+SQL_SQLITE = (
+"DROP VIEW IF EXISTS vw_mapa_locales;",
+"""
 CREATE VIEW vw_mapa_locales AS
 SELECT
     l.id AS "idLocal",
@@ -30,14 +31,20 @@ FROM locales_local l
 LEFT JOIN calificaciones_calificacion c ON c."idLocal" = l.id
 WHERE l."activo" = 1 AND l."latitud" IS NOT NULL AND l."longitud" IS NOT NULL
 GROUP BY l.id, l.nombre, l.direccion, l.latitud, l.longitud;
-"""
+""",
+)
 
 DROP_SQL = "DROP VIEW IF EXISTS vw_mapa_locales;"
 
 
 def crear_vista(apps, schema_editor):
-    sql = SQL_POSTGRES if schema_editor.connection.vendor == 'postgresql' else SQL_SQLITE
-    schema_editor.execute(sql)
+    if schema_editor.connection.vendor == 'postgresql':
+        sentencias = (SQL_POSTGRES,)
+    else:
+        # SQLite no admite varias sentencias en una sola execute().
+        sentencias = SQL_SQLITE
+    for sentencia in sentencias:
+        schema_editor.execute(sentencia)
 
 
 def borrar_vista(apps, schema_editor):

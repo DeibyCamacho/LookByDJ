@@ -2,7 +2,9 @@ from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm
 
-from .models import Rol, Usuario
+from .models import LONGITUD_MAXIMA_NOMBRE, Rol, Usuario
+
+MAX_NOMBRE = str(LONGITUD_MAXIMA_NOMBRE)
 
 
 class RegistroForm(forms.ModelForm):
@@ -28,8 +30,12 @@ class RegistroForm(forms.ModelForm):
         model = Usuario
         fields = ['nombre', 'apellido', 'correo', 'telefono']
         widgets = {
-            'nombre': forms.TextInput(attrs={'placeholder': 'Tu nombre'}),
-            'apellido': forms.TextInput(attrs={'placeholder': 'Tu apellido'}),
+            'nombre': forms.TextInput(attrs={
+                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE,
+            }),
+            'apellido': forms.TextInput(attrs={
+                'placeholder': 'Tu apellido', 'maxlength': MAX_NOMBRE,
+            }),
             'correo': forms.EmailInput(attrs={'placeholder': 'tu@correo.com'}),
             'telefono': forms.TextInput(attrs={'placeholder': '3001234567'}),
         }
@@ -94,6 +100,14 @@ class PerfilForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'telefono']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE,
+            }),
+            'apellido': forms.TextInput(attrs={
+                'placeholder': 'Tu apellido', 'maxlength': MAX_NOMBRE,
+            }),
+        }
 
 
 class UsuarioEdicionForm(PerfilForm):
@@ -123,6 +137,14 @@ class UsuarioAdminForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'correo', 'telefono', 'is_active', 'roles']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'placeholder': 'Nombre', 'maxlength': MAX_NOMBRE,
+            }),
+            'apellido': forms.TextInput(attrs={
+                'placeholder': 'Apellido', 'maxlength': MAX_NOMBRE,
+            }),
+        }
 
     def __init__(self, *args, editor=None, **kwargs):
         self.editor = editor

@@ -7,7 +7,8 @@ from django.urls import reverse
 
 from locales.models import Local
 
-from .models import Rol, Usuario
+from .forms import PerfilForm, RegistroForm, UsuarioAdminForm
+from .models import LONGITUD_MAXIMA_NOMBRE, Rol, Usuario
 from .templatetags.permisos import es_admin_filtro
 
 CLAVE = 'Clave-Segura-2026'
@@ -232,3 +233,43 @@ class CargarDemoTests(TestCase):
         self.assertEqual(despues, antes)
         self.assertIn('demo1234', salida.getvalue())
         self.assertIn('admin@lookby.com', salida.getvalue())
+
+
+class LongitudNombresTests(TestCase):
+    """Nombres y apellidos de personas: hasta 40 caracteres, sin errores de BD."""
+
+    def test_modelo_tiene_limite_de_40_en_nombre_y_apellido(self):
+        self.assertEqual(LONGITUD_MAXIMA_NOMBRE, 40)
+        for campo in ('nombre', 'apellido'):
+            with self.subTest(campo=campo):
+                self.assertEqual(Usuario._meta.get_field(campo).max_length, 40)
+
+    def test_registro_guarda_nombres_y_apellidos_de_40_caracteres(self):
+        nombre, apellido = 'N' * 40, 'A' * 40
+        respuesta = self.client.post(reverse('usuarios:registro'), datos_registro(
+            nombre=nombre, apellido=apellido, correo='largo@example.com',
+        ))
+        self.assertRedirects(respuesta, reverse('usuarios:perfil'))
+        usuario = Usuario.objects.get(correo='largo@example.com')
+        self.assertEqual(usuario.nombre, nombre)
+        self.assertEqual(usuario.apellido, apellido)
+
+    def test_registro_rechaza_nombres_y_apellidos_de_41_caracteres(self):
+        for campo in ('nombre', 'apellido'):
+            with self.subTest(campo=campo):
+                datos = datos_registro(correo=f'{campo}_largo@example.com')
+                datos[campo] = 'X' * 41
+                formulario = RegistroForm(data=datos)
+                self.assertFalse(formulario.is_valid())
+                self.assertIn(campo, formulario.errors)
+
+    def test_formularios_de_perfil_y_admin_usan_el_mismo_limite(self):
+        instancia = Usuario(correo='ejemplo@example.com', nombre='Ejemplo')
+        for clase in (PerfilForm, UsuarioAdminForm):
+            with self.subTest(formulario=clase.__name__):
+                formulario = clase(instance=instancia)
+                for campo in ('nombre', 'apellido'):
+                    self.assertEqual(formulario.fields[campo].max_length, 40)
+                    self.assertEqual(
+                        formulario.fields[campo].widget.attrs['maxlength'], '40'
+                    )
