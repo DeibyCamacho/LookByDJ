@@ -1,6 +1,13 @@
 from django.urls import path
-from .views import lista_inventario
+
+from . import views
+
+app_name = 'inventario'
 
 urlpatterns = [
-    path('', lista_inventario, name='lista_inventario'),
+    path('', views.lista_inventario, name='lista'),
+    path('crear/', views.crear_inventario, name='crear'),
+    path('<int:pk>/', views.detalle_inventario, name='detalle'),
+    path('<int:pk>/editar/', views.editar_inventario, name='editar'),
+    path('<int:pk>/eliminar/', views.eliminar_inventario, name='eliminar'),
 ]

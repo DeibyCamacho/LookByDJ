@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}{{ accion }} profesional | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>{{ accion }} profesional</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="acciones">
+    <button type="submit">Guardar</button>
+    <a class="btn-secundario" href="{% url 'profesionales:lista' %}">Cancelar</a>
+  </div>
+</form>
+</div>
+{% endblock %}

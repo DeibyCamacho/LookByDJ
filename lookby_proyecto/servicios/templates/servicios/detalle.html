@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}{{ servicio.nombre }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>{{ servicio.nombre }}</h2>
+<p>Categoría: {{ servicio.categoria }}</p>
+<p>{{ servicio.descripcion|default:'Sin descripción.' }}</p>
+<h3>Ofertas</h3>
+<ul>
+  {% for oferta in ofertas %}
+    <li><a href="{% url 'servicios:oferta_detalle' oferta.pk %}">{{ oferta }}</a>
+      — ${{ oferta.precio }} / {{ oferta.duracion }} min
+      {% if not oferta.activa %}(inactiva){% endif %}</li>
+  {% empty %}
+    <li>Sin ofertas registradas.</li>
+  {% endfor %}
+</ul>
+<div class="acciones">
+  <a class="btn-secundario" href="{% url 'servicios:lista' %}">Volver</a>
+  {% if puede_editar %}
+    <a href="{% url 'servicios:editar' servicio.pk %}">Editar</a>
+    <form method="post" action="{% url 'servicios:eliminar' servicio.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-secundario" onclick="return confirm('¿Eliminar el servicio?');">Eliminar</button>
+    </form>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

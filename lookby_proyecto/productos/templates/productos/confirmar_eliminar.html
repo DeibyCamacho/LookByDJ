@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Desactivar producto | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Desactivar producto</h2>
+  <p>¿Desactivar <strong>{{ producto.nombre }}</strong>? No se borrará: se ocultará del catálogo y su historial se conserva.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Sí, desactivar</button>
+      <a class="btn-secundario" href="{% url 'productos:detalle' producto.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Editar calificación | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Editar calificación #{{ calificacion.pk }}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="acciones">
+      <button type="submit">Guardar cambios</button>
+      <a class="btn-secundario" href="{% url 'calificaciones:detalle' pk=calificacion.pk %}">Volver a la calificación</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

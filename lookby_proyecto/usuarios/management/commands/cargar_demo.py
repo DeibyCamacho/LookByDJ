@@ -135,17 +135,22 @@ class Command(BaseCommand):
                     items=[{'inventario_id': inventario.pk, 'cantidad': 2}],
                 )
 
-        self.stdout.write(self.style.SUCCESS('Datos de ejemplo cargados.'))
+        self.stdout.write(self.style.SUCCESS('Datos de ejemplo cargados (comando idempotente).'))
+        self.stdout.write('Credenciales demo (SOLO desarrollo, no usar en producción):')
         self.stdout.write(f'  Admin:        admin@lookby.com / {CLAVE_DEMO}')
         self.stdout.write(f'  Cliente:      ana@lookby.com / {CLAVE_DEMO}')
         self.stdout.write(f'  Profesional:  carlos@lookby.com / {CLAVE_DEMO}')
+        self.stdout.write(f'Contraseña de las tres cuentas: {CLAVE_DEMO}')
 
     def crear_usuario(self, correo, nombre, rol, **extra):
-        usuario, _ = Usuario.objects.get_or_create(
+        usuario, creado = Usuario.objects.get_or_create(
             correo=correo,
             defaults={'nombre': nombre, **extra},
         )
-        usuario.set_password(CLAVE_DEMO)
-        usuario.save()
-        usuario.roles.add(rol)
+        # Se respeta una contraseña cambiada a mano: solo se (re)establece la
+        # contraseña demo si la cuenta es nueva o ya no coincide.
+        if creado or not usuario.check_password(CLAVE_DEMO):
+            usuario.set_password(CLAVE_DEMO)
+            usuario.save()
+        usuario.roles.add(rol)  # M2M: repetir el comando no duplica roles.
         return usuario

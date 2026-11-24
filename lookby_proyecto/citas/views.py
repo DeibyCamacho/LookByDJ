@@ -3,23 +3,36 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-
 from usuarios.permisos import es_admin
 
-from .forms import CrearCitaForm
+from profesionales.models import Profesional
+
+from .forms import CrearCitaForm, ReprogramarCitaForm
 from .models import Cita
 from .services import crear_cita as reservar_cita
+from .services import reprogramar_cita
 
 
-def lista_citas(request):
+def citas_visibles(usuario):
+    """Cada rol ve únicamente las citas que le corresponden."""
     citas = Cita.objects.select_related(
-        'cliente', 'oferta__servicio', 'oferta__profesional__usuario'
+        'cliente', 'oferta__servicio', 'oferta__profesional__usuario',
+        'oferta__local',
     )
-    if request.user.is_authenticated and not request.user.is_superuser:
-        citas = citas.filter(cliente=request.user)
-    return render(request, 'citas/lista.html', {'citas': citas})
+    if es_admin(usuario):
+        return citas
+    filtro = Q(cliente=usuario)
+    if Profesional.objects.filter(usuario=usuario).exists():
+        filtro |= Q(oferta__profesional__usuario=usuario)
+    return citas.filter(filtro).distinct()
+
+
+@login_required
+def lista_citas(request):
+    return render(request, 'citas/lista.html', {'citas': citas_visibles(request.user)})
 
 
 @login_required
@@ -44,13 +57,54 @@ def crear_cita(request):
 
 
 @login_required
+def detalle_cita(request, pk):
+    cita = get_object_or_404(citas_visibles(request.user), pk=pk)
+    return render(
+        request,
+        'citas/detalle.html',
+        {
+            'cita': cita,
+            'puede_cambiar': cita.estado in ('PENDIENTE', 'CONFIRMADA'),
+        },
+    )
+
+
+@login_required
+def editar_cita(request, pk):
+    """Reprograma una cita pendiente o confirmada usando services.py."""
+    cita = get_object_or_404(citas_visibles(request.user), pk=pk)
+    if cita.estado not in ('PENDIENTE', 'CONFIRMADA'):
+        messages.error(request, 'Esa cita no se puede reprogramar.')
+        return redirect('citas:detalle', pk=pk)
+
+    if request.method == 'POST':
+        form = ReprogramarCitaForm(request.POST)
+        if form.is_valid():
+            oferta = form.cleaned_data['oferta']
+            inicio = form.cleaned_data['fecha_inicio']
+            try:
+                reprogramar_cita(cita, oferta=oferta, fecha_inicio=inicio)
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(request, 'Cita reprogramada correctamente.')
+                return redirect('citas:detalle', pk=pk)
+    else:
+        form = ReprogramarCitaForm(initial={
+            'oferta': cita.oferta_id,
+            'fecha_inicio': cita.fecha_inicio,
+        })
+    return render(request, 'citas/editar.html', {'form': form, 'cita': cita})
+
+
+@login_required
 @require_POST
 def cancelar_cita(request, pk):
     """Cancela conservando la cita en el historial (no se borra)."""
-    cita = get_object_or_404(Cita, pk=pk)
-    if cita.cliente_id != request.user.pk and not es_admin(request.user):
-        messages.error(request, 'No puedes cancelar la cita de otra persona.')
-        return redirect('citas:lista')
+    cita = get_object_or_404(citas_visibles(request.user), pk=pk)
+    if cita.estado in ('COMPLETADA', 'CANCELADA'):
+        messages.error(request, 'Solo se pueden cancelar citas pendientes o confirmadas.')
+        return redirect('citas:detalle', pk=pk)
     cita.estado = 'CANCELADA'
     cita.save(update_fields=['estado'])
     messages.success(request, 'La cita fue cancelada.')

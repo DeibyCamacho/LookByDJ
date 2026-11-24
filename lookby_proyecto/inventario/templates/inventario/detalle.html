@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Inventario de {{ inventario.producto.nombre }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>{{ inventario.producto.nombre }}</h2>
+  <p><strong>Local:</strong> {{ inventario.local.nombre }}</p>
+  <p><strong>Precio de venta:</strong> ${{ inventario.precio_venta }}</p>
+  <p><strong>Stock actual:</strong> {{ inventario.stock_actual }} unidades</p>
+  <p>
+    <a href="{% url 'inventario:editar' inventario.pk %}">Editar</a> |
+    <a href="{% url 'inventario:eliminar' inventario.pk %}">Eliminar</a> |
+    <a href="{% url 'inventario:lista' %}">Volver al listado</a>
+  </p>
+</div>
+{% endblock %}

@@ -1,7 +1,14 @@
+from io import StringIO
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Usuario
+from locales.models import Local
+
+from .models import Rol, Usuario
+from .templatetags.permisos import es_admin_filtro
 
 CLAVE = 'Clave-Segura-2026'
 
@@ -87,3 +94,141 @@ class SesionTests(TestCase):
         self.u.agregar_rol('CLIENTE')
         self.u.agregar_rol('PROFESIONAL')
         self.assertEqual(self.u.roles.count(), 2)
+
+
+class CuentasCRUDTests(TestCase):
+    def setUp(self):
+        self.admin = Usuario.objects.create_superuser(
+            'admin@example.com', CLAVE, nombre='Admin',
+        )
+        self.admin_por_rol = Usuario.objects.create_user(
+            'adminrol@example.com', CLAVE, nombre='Admin por rol',
+        )
+        self.admin_por_rol.agregar_rol(Rol.ADMINISTRADOR)
+        self.cliente = Usuario.objects.create_user(
+            'cliente@example.com', CLAVE, nombre='Cliente',
+        )
+        self.otro = Usuario.objects.create_user(
+            'otro@example.com', CLAVE, nombre='Otro',
+        )
+        self.rol_admin = Rol.objects.get(nombre=Rol.ADMINISTRADOR)
+
+    def test_listado_requiere_login_y_es_admin(self):
+        url = reverse('usuarios:lista')
+        r = self.client.get(url)
+        self.assertRedirects(r, f"{reverse('usuarios:entrar')}?next={url}")
+
+        self.client.force_login(self.cliente)
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(reverse('usuarios:entrar'), r.url)
+
+        self.client.force_login(self.admin_por_rol)
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.cliente.correo)
+
+    def test_detalle_propio_permitido_y_ajeno_prohibido(self):
+        self.client.force_login(self.cliente)
+        propio = reverse('usuarios:detalle', args=[self.cliente.pk])
+        ajeno = reverse('usuarios:detalle', args=[self.otro.pk])
+        self.assertEqual(self.client.get(propio).status_code, 200)
+        self.assertEqual(self.client.get(ajeno).status_code, 403)
+
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(ajeno).status_code, 200)
+
+    def test_edicion_propia_no_permite_asignarse_admin(self):
+        self.client.force_login(self.cliente)
+        url = reverse('usuarios:editar', args=[self.cliente.pk])
+        r = self.client.post(url, {
+            'nombre': 'Cliente Nuevo',
+            'apellido': 'Pérez',
+            'telefono': '3000000000',
+            # Campos espurios: un usuario normal no debe poder alterarlos.
+            'roles': [self.rol_admin.pk],
+            'is_active': '',
+            'correo': 'hackeado@example.com',
+        })
+        self.assertRedirects(r, reverse('usuarios:detalle', args=[self.cliente.pk]))
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.nombre, 'Cliente Nuevo')
+        self.assertEqual(self.cliente.correo, 'cliente@example.com')
+        self.assertTrue(self.cliente.is_active)
+        self.assertFalse(self.cliente.tiene_rol(Rol.ADMINISTRADOR))
+
+    def test_admin_puede_cambiar_roles_de_otro_usuario(self):
+        self.client.force_login(self.admin)
+        rol_pro = Rol.objects.get(nombre=Rol.PROFESIONAL)
+        url = reverse('usuarios:editar', args=[self.otro.pk])
+        r = self.client.post(url, {
+            'nombre': 'Otro', 'apellido': '', 'telefono': '',
+            'correo': self.otro.correo, 'is_active': 'on',
+            'roles': [rol_pro.pk],
+        })
+        self.assertRedirects(r, reverse('usuarios:detalle', args=[self.otro.pk]))
+        self.assertTrue(self.otro.tiene_rol(Rol.PROFESIONAL))
+        self.assertFalse(self.otro.tiene_rol(Rol.ADMINISTRADOR))
+
+    def test_admin_sin_rol_admin_no_puede_ascenderse_a_si_mismo(self):
+        root = Usuario.objects.create_superuser('root2@example.com', CLAVE, nombre='Root')
+        self.client.force_login(root)
+        url = reverse('usuarios:editar', args=[root.pk])
+        r = self.client.post(url, {
+            'nombre': 'Root', 'apellido': '', 'telefono': '',
+            'correo': root.correo, 'is_active': 'on',
+            'roles': [self.rol_admin.pk],
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(root.tiene_rol(Rol.ADMINISTRADOR))
+
+    def test_desactivar_respeta_permisos_y_conserva_la_cuenta(self):
+        url = reverse('usuarios:desactivar', args=[self.otro.pk])
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+        self.client.force_login(self.cliente)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.post(url).status_code, 403)
+        self.otro.refresh_from_db()
+        self.assertTrue(self.otro.is_active)
+
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        r = self.client.post(url)
+        self.assertRedirects(r, reverse('usuarios:lista'))
+        self.otro.refresh_from_db()
+        self.assertFalse(self.otro.is_active)
+        self.assertTrue(Usuario.objects.filter(pk=self.otro.pk).exists())
+
+    def test_usuario_puede_desactivar_su_propia_cuenta(self):
+        self.client.force_login(self.cliente)
+        r = self.client.post(
+            reverse('usuarios:desactivar', args=[self.cliente.pk])
+        )
+        self.assertRedirects(r, reverse('locales:lista'))
+        self.cliente.refresh_from_db()
+        self.assertFalse(self.cliente.is_active)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+
+class FiltroPermisosTests(TestCase):
+    def test_filtro_es_admin_es_seguro_con_anonimo(self):
+        self.assertFalse(es_admin_filtro(AnonymousUser()))
+        self.assertFalse(es_admin_filtro(None))
+
+        admin = Usuario.objects.create_superuser(
+            'root3@example.com', CLAVE, nombre='Root',
+        )
+        self.assertTrue(es_admin_filtro(admin))
+
+
+class CargarDemoTests(TestCase):
+    def test_cargar_demo_es_idempotente_y_muestra_credenciales(self):
+        call_command('cargar_demo', verbosity=0)
+        antes = (Usuario.objects.count(), Rol.objects.count(), Local.objects.count())
+        salida = StringIO()
+        call_command('cargar_demo', stdout=salida)
+        despues = (Usuario.objects.count(), Rol.objects.count(), Local.objects.count())
+        self.assertEqual(despues, antes)
+        self.assertIn('demo1234', salida.getvalue())
+        self.assertIn('admin@lookby.com', salida.getvalue())

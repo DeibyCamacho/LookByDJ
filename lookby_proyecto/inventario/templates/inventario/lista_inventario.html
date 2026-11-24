@@ -62,6 +62,7 @@
 <div class="contenido">
 <div class="container">
         <h2>Control de Stock por Local</h2>
+        <p><a href="{% url 'inventario:crear' %}">Nuevo registro de inventario</a></p>
         <div class="table-card">
             <table>
                 <thead>
@@ -69,7 +70,9 @@
                         <th>Producto</th>
                         <th>Local / Sede</th>
                         <th>Cantidad Disponible</th>
+                        <th>Precio de venta</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -78,6 +81,7 @@
                         <td><strong>{{ item.producto.nombre }}</strong></td>
                         <td>{{ item.local }}</td>
                         <td>{{ item.stock_actual }} unidades</td>
+                        <td>${{ item.precio_venta }}</td>
                         <td>
                             {% if item.stock_actual > 5 %}
                                 <span class="badge stock-ok">Disponible</span>
@@ -85,11 +89,17 @@
                                 <span class="badge stock-bajo">Stock Bajo</span>
                             {% endif %}
                         </td>
+                        <td>
+                            <a href="{% url 'inventario:detalle' item.pk %}">Detalle</a> |
+                            <a href="{% url 'inventario:editar' item.pk %}">Editar</a> |
+                            <a href="{% url 'inventario:eliminar' item.pk %}">Eliminar</a>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: #71717a;">
-                            No hay registros de inventario aún. Agrega existencias desde el panel de administración.
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #71717a;">
+                            No hay registros de inventario aún.
+                            <a href="{% url 'inventario:crear' %}">Agrega el primero</a>.
                         </td>
                     </tr>
                     {% endfor %}

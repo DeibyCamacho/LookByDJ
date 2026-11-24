@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Editar pedido #{{ pedido.pk }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Editar pedido #{{ pedido.pk }}</h2>
+  <p>Solo se puede cambiar la dirección; los productos y el total los fija el servidor.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="acciones">
+      <button type="submit">Guardar cambios</button>
+      <a class="btn-secundario" href="{% url 'pedidos:detalle' pk=pedido.pk %}">Volver al pedido</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

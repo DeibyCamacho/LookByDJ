@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load permisos %}
+{% block title %}{{ producto.nombre }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>{{ producto.nombre }}{% if not producto.activo %} (desactivado){% endif %}</h2>
+  <p><strong>Categoría:</strong> {{ producto.categoria|default:"Sin categoría" }}</p>
+  <p>{{ producto.descripcion|default:"Sin descripción." }}</p>
+
+  <h3>Disponibilidad y precios por local</h3>
+  <table>
+    <thead><tr><th>Local</th><th>Precio de venta</th><th>Stock</th></tr></thead>
+    <tbody>
+      {% for inv in producto.inventarios.all %}
+        <tr>
+          <td>{{ inv.local.nombre }}</td>
+          <td>${{ inv.precio_venta }}</td>
+          <td>{{ inv.stock_actual }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">Este producto aún no tiene existencias registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if user|es_admin %}
+    <p>
+      <a href="{% url 'productos:editar' producto.pk %}">Editar</a> |
+      <a href="{% url 'productos:eliminar' producto.pk %}">Desactivar</a> |
+      <a href="{% url 'inventario:crear' %}">Agregar inventario</a>
+    </p>
+  {% endif %}
+  <p><a href="{% url 'productos:lista' %}">Volver al catálogo</a></p>
+</div>
+{% endblock %}

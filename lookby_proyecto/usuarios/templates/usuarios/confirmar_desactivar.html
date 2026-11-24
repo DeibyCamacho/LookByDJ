@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Desactivar cuenta | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Desactivar cuenta</h2>
+  <p>¿Seguro que quieres desactivar la cuenta de <strong>{{ usuario.nombre_completo }}</strong> ({{ usuario.correo }})? Se conserva su historial.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Sí, desactivar</button>
+      <a class="btn-secundario" href="{% url 'usuarios:detalle' usuario.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

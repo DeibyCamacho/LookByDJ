@@ -2,6 +2,8 @@ from django import forms
 from inventario.models import InventarioLocal
 from locales.models import Local
 
+from .models import Pedido
+
 
 class CrearPedidoForm(forms.Form):
     """Datos mínimos para registrar un pedido. El total lo calcula el servidor."""
@@ -30,3 +32,36 @@ class CrearPedidoForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={'placeholder': 'Ej. Calle 50 # 43-20'}),
     )
+
+    def clean(self):
+        """El producto debe pertenecer al local elegido (evita el 500 al crear)."""
+        cleaned = super().clean()
+        local = cleaned.get('local')
+        inventario = cleaned.get('inventario')
+        cantidad = cleaned.get('cantidad')
+
+        if local and inventario:
+            if inventario.local_id != local.pk:
+                self.add_error(
+                    'inventario',
+                    'El producto seleccionado pertenece a otro local. '
+                    'Elige un producto disponible en el local indicado.',
+                )
+            else:
+                if not local.activo:
+                    self.add_error('local', 'El local seleccionado no está activo.')
+                if cantidad is not None and cantidad > inventario.stock_actual:
+                    self.add_error(
+                        'cantidad',
+                        f'Solo hay {inventario.stock_actual} unidades disponibles.',
+                    )
+        return cleaned
+
+
+class PedidoEditarForm(forms.ModelForm):
+    """Solo se edita la dirección: ítems y total los fija el servidor."""
+
+    class Meta:
+        model = Pedido
+        fields = ['direccion_entrega']
+        labels = {'direccion_entrega': 'Dirección de entrega'}

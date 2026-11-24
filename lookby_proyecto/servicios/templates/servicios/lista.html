@@ -1,18 +1,42 @@
 {% extends 'base.html' %}
-{% block title %}Servicios | LookBy{% endblock %}
+{% load permisos %}
+{% block title %}Servicios y precios | LookBy{% endblock %}
 {% block content %}
 <div class="contenido">
 <h2>Servicios y precios</h2>
+
+<section id="precios">
+<h3>Precios de servicios activos</h3>
 <ul>
   {% for oferta in ofertas %}
     <li>
-      {{ oferta.servicio.nombre }} - {{ oferta.profesional.usuario.nombre_completo }}
+      <a href="{% url 'servicios:oferta_detalle' oferta.pk %}">{{ oferta.servicio.nombre }}</a>
+      - <a href="{% url 'profesionales:detalle' oferta.profesional.pk %}">{{ oferta.profesional.usuario.nombre_completo }}</a>
       {% if oferta.local %}({{ oferta.local.nombre }}){% endif %}
       | ${{ oferta.precio }} | {{ oferta.duracion }} min
+      <a href="{% url 'citas:crear' %}">Reservar</a>
     </li>
   {% empty %}
     <li>Aún no hay ofertas activas.</li>
   {% endfor %}
 </ul>
+</section>
+
+<section id="catalogo">
+<h3>Catálogo de servicios</h3>
+<ul>
+  {% for servicio in servicios %}
+    <li><a href="{% url 'servicios:detalle' servicio.pk %}">{{ servicio.nombre }}</a> — {{ servicio.categoria }}</li>
+  {% empty %}
+    <li>Aún no hay servicios registrados.</li>
+  {% endfor %}
+</ul>
+</section>
+
+<p>
+  <a href="{% url 'servicios:ofertas_lista' %}">Ver todas las ofertas</a>
+  {% if user.is_authenticated %}| <a href="{% url 'servicios:oferta_crear' %}">+ Nueva oferta</a>{% endif %}
+  {% if user|es_admin %}| <a href="{% url 'servicios:crear' %}">+ Nuevo servicio</a>{% endif %}
+</p>
 </div>
 {% endblock %}

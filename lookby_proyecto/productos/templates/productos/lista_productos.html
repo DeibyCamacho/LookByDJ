@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load permisos %}
 {% block title %}Catálogo de Productos - LookBy{% endblock %}
 {% block extra_head %}
 <style>
@@ -176,15 +177,28 @@
                         <h3 class="card-title">{{ p.nombre }}</h3>
                         <p class="card-desc">{{ p.descripcion }}</p>
                         <div class="card-footer">
-                            <span class="price">${{ p.precio }}</span>
-                            <button class="btn-reservar">Solicitar</button>
+                            <span class="price">
+                                {% for inv in p.inventarios.all %}
+                                    ${{ inv.precio_venta }} <small>({{ inv.local.nombre }})</small>{% if not forloop.last %}<br>{% endif %}
+                                {% empty %}
+                                    <small>Sin precio registrado</small>
+                                {% endfor %}
+                            </span>
+                            <a class="btn-reservar" href="{% url 'pedidos:crear' %}?producto={{ p.pk }}">Solicitar</a>
                         </div>
+                        {% if user|es_admin %}
+                        <p class="card-acciones">
+                            <a href="{% url 'productos:detalle' p.pk %}">Detalle</a> |
+                            <a href="{% url 'productos:editar' p.pk %}">Editar</a> |
+                            <a href="{% url 'productos:eliminar' p.pk %}">Desactivar</a>
+                        </p>
+                        {% endif %}
                     </div>
                 </div>
             {% empty %}
                 <div class="empty-state">
                     <h3>No hay productos registrados todavía</h3>
-                    <p>Agrega nuevos artículos desde el panel de administración para visualizarlos aquí[cite: 12].</p>
+                    <p>Agrega nuevos artículos desde el panel de administración para visualizarlos aquí.</p>
                 </div>
             {% endfor %}
         </div>

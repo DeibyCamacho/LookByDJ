@@ -3,9 +3,14 @@
 {% block content %}
 <div class="contenido">
 <h1>Catálogos de LookBy</h1>
+<p><a href="{% url 'catalogos:crear' %}">Nuevo catálogo</a></p>
     <ul>
         {% for catalogo in catalogos %}
-            <li><strong>{{ catalogo.nombre }}</strong> - {{ catalogo.local.nombre }}</li>
+            <li>
+                <a href="{% url 'catalogos:detalle' catalogo.pk %}"><strong>{{ catalogo.nombre }}</strong></a>
+                - {{ catalogo.local.nombre }}
+                - {{ catalogo.productos.count }} producto(s)
+            </li>
         {% empty %}
             <li>Aún no hay catálogos registrados.</li>
         {% endfor %}

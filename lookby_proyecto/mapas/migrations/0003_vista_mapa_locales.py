@@ -9,23 +9,26 @@ SELECT
     l.direccion,
     l.latitud,
     l.longitud,
-    COALESCE(ROUND(AVG(c.puntuacion), 2), 0) AS calificacion
+    ROUND(AVG(c.puntuacion), 2) AS calificacion
 FROM locales_local l
 LEFT JOIN calificaciones_calificacion c ON c."idLocal" = l.id
+WHERE l."activo" = TRUE AND l."latitud" IS NOT NULL AND l."longitud" IS NOT NULL
 GROUP BY l.id, l.nombre, l.direccion, l.latitud, l.longitud;
 """
 
 SQL_SQLITE = """
-CREATE VIEW IF NOT EXISTS vw_mapa_locales AS
+DROP VIEW IF EXISTS vw_mapa_locales;
+CREATE VIEW vw_mapa_locales AS
 SELECT
     l.id AS "idLocal",
     l.nombre,
     l.direccion,
     l.latitud,
     l.longitud,
-    COALESCE(ROUND(AVG(c.puntuacion), 2), 0) AS calificacion
+    ROUND(AVG(c.puntuacion), 2) AS calificacion
 FROM locales_local l
 LEFT JOIN calificaciones_calificacion c ON c."idLocal" = l.id
+WHERE l."activo" = 1 AND l."latitud" IS NOT NULL AND l."longitud" IS NOT NULL
 GROUP BY l.id, l.nombre, l.direccion, l.latitud, l.longitud;
 """
 

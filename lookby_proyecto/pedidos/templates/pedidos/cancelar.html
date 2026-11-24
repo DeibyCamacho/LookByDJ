@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Cancelar pedido #{{ pedido.pk }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Cancelar pedido #{{ pedido.pk }}</h2>
+  <p>El pedido quedará en estado <strong>CANCELADO</strong> y el stock reservado volverá al inventario. No se borrará el historial.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Confirmar cancelación</button>
+      <a class="btn-secundario" href="{% url 'pedidos:detalle' pk=pedido.pk %}">Volver al pedido</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

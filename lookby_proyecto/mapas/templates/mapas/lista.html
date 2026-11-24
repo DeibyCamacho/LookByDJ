@@ -15,7 +15,10 @@
 
   <ul>
     {% for local in locales %}
-      <li><strong>{{ local.nombre }}</strong> - {{ local.direccion }} - ⭐ {{ local.calificacion }}</li>
+      <li>
+        <strong>{{ local.nombre }}</strong> - {{ local.direccion }} -
+        {% if local.sin_calificar %}Sin calificar{% else %}⭐ {{ local.calificacion }}{% endif %}
+      </li>
     {% empty %}
       <li>No hay datos del mapa todavía.</li>
     {% endfor %}
@@ -38,16 +41,32 @@
     .then(data => {
       const puntos = [];
       data.locales.forEach(local => {
+        // Number(null) es 0: por eso se comprueba null antes de convertir.
+        if (local.latitud === null || local.longitud === null) return;
         const lat = Number(local.latitud);
         const lng = Number(local.longitud);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          L.marker([lat, lng])
-            .addTo(mapa)
-            .bindPopup('<strong>' + local.nombre + '</strong><br>' + local.direccion + '<br>⭐ ' + local.calificacion);
-          puntos.push([lat, lng]);
-        }
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        if (lat === 0 && lng === 0) return;
+
+        const popup = document.createElement('div');
+        const titulo = document.createElement('strong');
+        titulo.textContent = local.nombre;
+        popup.appendChild(titulo);
+        popup.appendChild(document.createElement('br'));
+        popup.appendChild(document.createTextNode(local.direccion));
+        popup.appendChild(document.createElement('br'));
+        popup.appendChild(document.createTextNode(
+          local.calificacion === null ? 'Sin calificar' : '⭐ ' + local.calificacion
+        ));
+        L.marker([lat, lng]).addTo(mapa).bindPopup(popup);
+        puntos.push([lat, lng]);
       });
       if (puntos.length) mapa.fitBounds(puntos, { padding: [40, 40] });
+    })
+    .catch(() => {
+      const aviso = document.createElement('p');
+      aviso.textContent = 'No se pudieron cargar los locales del mapa.';
+      document.getElementById('mapa-lookby').after(aviso);
     });
 </script>
 {% endblock %}

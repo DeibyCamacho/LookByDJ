@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Oferta | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>{{ oferta.servicio.nombre }} — {{ oferta.profesional.usuario.nombre_completo }}</h2>
+<ul>
+  <li>Precio: ${{ oferta.precio }}</li>
+  <li>Duración: {{ oferta.duracion }} minutos</li>
+  <li>Local: {% if oferta.local %}{{ oferta.local }}{% else %}sin local{% endif %}</li>
+  <li>Estado: {% if oferta.activa %}Activa{% else %}Inactiva{% endif %}</li>
+</ul>
+<p><a href="{% url 'citas:crear' %}">Reservar esta oferta</a></p>
+<div class="acciones">
+  <a class="btn-secundario" href="{% url 'servicios:ofertas_lista' %}">Volver</a>
+  {% if puede_editar %}
+    <a href="{% url 'servicios:oferta_editar' oferta.pk %}">Editar</a>
+    {% if oferta.activa %}
+      <form method="post" action="{% url 'servicios:oferta_eliminar' oferta.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="btn-secundario" onclick="return confirm('¿Desactivar la oferta?');">Desactivar</button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>
+</div>
+{% endblock %}

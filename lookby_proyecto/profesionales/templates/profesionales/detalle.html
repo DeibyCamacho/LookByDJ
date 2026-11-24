@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}{{ profesional.usuario.nombre_completo }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>{{ profesional.usuario.nombre_completo }}</h2>
+<p>{{ profesional.biografia|default:'Sin biografía.' }}</p>
+<ul>
+  <li>Domicilio: {% if profesional.domicilio %}sí{% else %}no{% endif %}</li>
+  <li>Coordenadas: {% if profesional.latitud and profesional.longitud %}{{ profesional.latitud }}, {{ profesional.longitud }}{% else %}sin definir{% endif %}</li>
+  <li>Correo: {{ profesional.usuario.correo }}</li>
+</ul>
+<h3>Horarios</h3>
+<ul>
+  {% for horario in profesional.horarios.all %}
+    <li><a href="{% url 'profesionales:horario_detalle' horario.pk %}">
+      {{ horario.get_dia_semana_display }} {{ horario.hora_inicio }}–{{ horario.hora_fin }}
+      {% if horario.local %}({{ horario.local.nombre }}){% endif %}</a></li>
+  {% empty %}
+    <li>Sin horarios publicados.</li>
+  {% endfor %}
+</ul>
+<div class="acciones">
+  <a class="btn-secundario" href="{% url 'profesionales:lista' %}">Volver</a>
+  {% if puede_editar %}
+    <a href="{% url 'profesionales:editar' profesional.pk %}">Editar</a>
+    <form method="post" action="{% url 'profesionales:eliminar' profesional.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-secundario" onclick="return confirm('¿Eliminar el perfil?');">Eliminar</button>
+    </form>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

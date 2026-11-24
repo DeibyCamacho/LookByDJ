@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Horarios | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>Horarios de profesionales</h2>
+{% if user.is_authenticated %}<p><a href="{% url 'profesionales:horario_crear' %}">+ Nuevo horario</a></p>{% endif %}
+<ul>
+  {% for horario in horarios %}
+    <li><a href="{% url 'profesionales:horario_detalle' horario.pk %}">{{ horario }}</a></li>
+  {% empty %}
+    <li>Aún no hay horarios registrados.</li>
+  {% endfor %}
+</ul>
+<p><a href="{% url 'profesionales:lista' %}">Volver a profesionales</a></p>
+</div>
+{% endblock %}

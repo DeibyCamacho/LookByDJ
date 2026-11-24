@@ -24,7 +24,8 @@ class Local(models.Model):
     # 'administradores' para cumplir la regla del manual de varios administradores.
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        # El dueño puede darse de baja sin borrar el historial del local.
+        on_delete=models.SET_NULL,
         related_name='locales',
         db_column='idUsuario',
         null=True,
@@ -43,9 +44,15 @@ class Local(models.Model):
         return f'{self.nombre} ({self.ciudad})'
 
     def puede_administrar(self, usuario):
-        """True si el usuario puede editar o desactivar este local."""
-        if not usuario.is_authenticated:
+        """True si el usuario puede editar o desactivar este local.
+
+        El dueño según el MER (FK idUsuario) manda aunque no esté en la M2M;
+        también mandan los administradores explícitos y los superusuarios.
+        """
+        if usuario is None or not getattr(usuario, 'is_authenticated', False):
             return False
-        if usuario.is_superuser:
+        if getattr(usuario, 'is_superuser', False):
+            return True
+        if usuario.pk is not None and self.usuario_id == usuario.pk:
             return True
         return self.administradores.filter(pk=usuario.pk).exists()

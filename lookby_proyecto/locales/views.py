@@ -19,9 +19,16 @@ def _local_administrable(request, pk):
 def lista_locales(request):
     locales = Local.objects.filter(activo=True)
     ciudad = request.GET.get('ciudad', '').strip()
+    nombre = (request.GET.get('nombre') or request.GET.get('q') or '').strip()
     if ciudad:
         locales = locales.filter(ciudad__icontains=ciudad)
-    return render(request, 'locales/lista.html', {'locales': locales, 'ciudad': ciudad})
+    if nombre:
+        locales = locales.filter(nombre__icontains=nombre)
+    return render(request, 'locales/lista.html', {
+        'locales': locales,
+        'ciudad': ciudad,
+        'nombre': nombre,
+    })
 
 
 def detalle_local(request, pk):
@@ -38,9 +45,12 @@ def crear_local(request):
     if request.method == 'POST':
         form = LocalForm(request.POST)
         if form.is_valid():
-            local = form.save()
+            local = form.save(commit=False)
+            local.usuario = request.user  # FK idUsuario del MER
+            local.save()
+            form.save_m2m()
+            # Administrador de ESTE local, nunca administrador global.
             local.administradores.add(request.user)
-            request.user.agregar_rol('ADMINISTRADOR')
             messages.success(request, 'Local registrado.')
             return redirect('locales:detalle', pk=local.pk)
     else:

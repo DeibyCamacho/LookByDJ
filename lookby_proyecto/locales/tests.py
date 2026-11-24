@@ -31,13 +31,16 @@ class CrearLocalTests(LocalesBase):
         self.assertEqual(r.status_code, 302)
         self.assertIn(reverse('usuarios:entrar'), r.url)
 
-    def test_crear_asigna_administrador_y_rol(self):
+    def test_crear_asigna_usuario_y_no_da_rol_admin(self):
         self.client.force_login(self.otro)
         r = self.client.post(reverse('locales:crear'), datos_local(nombre='Nuevo'))
         local = Local.objects.get(nombre='Nuevo')
         self.assertRedirects(r, reverse('locales:detalle', args=[local.pk]))
+        self.assertEqual(local.usuario_id, self.otro.pk)
+        self.assertTrue(local.administradores.filter(pk=self.otro.pk).exists())
         self.assertTrue(local.puede_administrar(self.otro))
-        self.assertTrue(self.otro.tiene_rol('ADMINISTRADOR'))
+        # El creador administra su local, pero NO escala a administrador global.
+        self.assertFalse(self.otro.tiene_rol('ADMINISTRADOR'))
 
     def test_coordenadas_incompletas_rechazadas(self):
         self.client.force_login(self.otro)
@@ -69,6 +72,37 @@ class PermisosLocalTests(LocalesBase):
         self.assertEqual(self.local.nombre, 'Salón Luna')
         self.assertTrue(self.local.activo)
 
+    def test_dueno_por_fk_puede_editar(self):
+        # El dueño según el MER (FK idUsuario) no está en la M2M.
+        self.local.usuario = self.otro
+        self.local.save(update_fields=['usuario'])
+        self.client.force_login(self.otro)
+        r = self.client.post(
+            reverse('locales:editar', args=[self.local.pk]),
+            datos_local(nombre='Renombrado por dueno'),
+        )
+        self.assertRedirects(r, reverse('locales:detalle', args=[self.local.pk]))
+        self.local.refresh_from_db()
+        self.assertEqual(self.local.nombre, 'Renombrado por dueno')
+
+    def test_usuario_ajeno_no_puede_editar_ni_desactivar(self):
+        tercero = Usuario.objects.create_user('tercero@example.com', CLAVE, nombre='Tercero')
+        self.local.usuario = tercero
+        self.local.save(update_fields=['usuario'])
+        self.client.force_login(self.otro)
+        url_editar = reverse('locales:editar', args=[self.local.pk])
+        self.assertEqual(self.client.get(url_editar).status_code, 403)
+        self.assertEqual(
+            self.client.post(url_editar, datos_local(nombre='Hack')).status_code, 403
+        )
+        self.assertEqual(
+            self.client.post(reverse('locales:desactivar', args=[self.local.pk])).status_code,
+            403,
+        )
+        self.local.refresh_from_db()
+        self.assertEqual(self.local.nombre, 'Salón Luna')
+        self.assertTrue(self.local.activo)
+
     def test_anonimo_redirigido_al_login(self):
         r = self.client.post(reverse('locales:desactivar', args=[self.local.pk]))
         self.assertEqual(r.status_code, 302)
@@ -91,6 +125,18 @@ class ListadoYDesactivarTests(LocalesBase):
         self.assertContains(r, 'Otro')
         self.assertNotContains(r, 'Salón Luna')
 
+    def test_busqueda_por_nombre(self):
+        Local.objects.create(nombre='Peluquería Nueva', direccion='x', ciudad='Bogotá')
+        r = self.client.get(reverse('locales:lista'), {'nombre': 'luna'})
+        self.assertContains(r, 'Salón Luna')
+        self.assertNotContains(r, 'Peluquería Nueva')
+
+    def test_alias_eliminar_apunta_a_la_misma_baja(self):
+        self.assertEqual(
+            reverse('locales:eliminar', args=[self.local.pk]),
+            reverse('locales:desactivar', args=[self.local.pk]),
+        )
+
     def test_desactivar_oculta_pero_no_borra(self):
         self.client.force_login(self.dueno)
         self.client.post(reverse('locales:desactivar', args=[self.local.pk]))
@@ -111,3 +157,15 @@ class ListadoYDesactivarTests(LocalesBase):
         self.local.save()
         self.client.force_login(self.dueno)
         self.assertEqual(self.client.get(reverse('locales:detalle', args=[self.local.pk])).status_code, 200)
+
+
+class ModeloLocalTests(TestCase):
+    def test_borrar_dueno_no_borra_el_local(self):
+        dueno = Usuario.objects.create_user('dueno2@example.com', CLAVE, nombre='Dueño 2')
+        local = Local.objects.create(
+            nombre='Con historial', direccion='Calle 2', ciudad='Medellín', usuario=dueno,
+        )
+        dueno.delete()
+        local.refresh_from_db()
+        self.assertIsNone(local.usuario_id)
+        self.assertTrue(Local.objects.filter(pk=local.pk).exists())

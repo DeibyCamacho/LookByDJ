@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Horario | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>{{ horario }}</h2>
+<ul>
+  <li>Profesional: <a href="{% url 'profesionales:detalle' horario.profesional.pk %}">{{ horario.profesional }}</a></li>
+  <li>Día: {{ horario.get_dia_semana_display }}</li>
+  <li>Hora: {{ horario.hora_inicio }} a {{ horario.hora_fin }}</li>
+  <li>Local: {% if horario.local %}{{ horario.local }}{% else %}a domicilio / sin local{% endif %}</li>
+</ul>
+<div class="acciones">
+  <a class="btn-secundario" href="{% url 'profesionales:horarios_lista' %}">Volver</a>
+  {% if puede_editar %}
+    <a href="{% url 'profesionales:horario_editar' horario.pk %}">Editar</a>
+    <form method="post" action="{% url 'profesionales:horario_eliminar' horario.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-secundario" onclick="return confirm('¿Eliminar el horario?');">Eliminar</button>
+    </form>
+  {% endif %}
+</div>
+</div>
+{% endblock %}
