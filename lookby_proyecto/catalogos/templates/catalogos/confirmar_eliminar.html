@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar catálogo | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Eliminar catálogo</h2>
+  <p>¿Eliminar el catálogo <strong>{{ catalogo.nombre }}</strong>?</p>
+  {% if con_productos %}
+    <p><strong>No se puede eliminar:</strong> todavía tiene productos. Quítalos primero.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit" {% if con_productos %}disabled{% endif %}>Sí, eliminar</button>
+      <a class="btn-secundario" href="{% url 'catalogos:detalle' catalogo.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

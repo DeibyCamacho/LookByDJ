@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load permisos %}
+{% block title %}{{ catalogo.nombre }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>{{ catalogo.nombre }}</h2>
+  <p><strong>Local:</strong> {{ catalogo.local.nombre }}</p>
+  <p>{{ catalogo.descripcion|default:"Sin descripción." }}</p>
+
+  <h3>Productos del catálogo</h3>
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Stock disponible</th><th>Precio de venta</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.inventario.producto.nombre }}</td>
+          <td>{{ item.inventario.stock_actual }}</td>
+          <td>${{ item.inventario.precio_venta }}</td>
+          <td>
+            {% if user|es_admin %}
+              <a href="{% url 'catalogos:producto_editar' catalogo.pk item.pk %}">Editar</a> |
+              <a href="{% url 'catalogos:producto_eliminar' catalogo.pk item.pk %}">Quitar</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Este catálogo aún no tiene productos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if user|es_admin %}
+    <p>
+      <a href="{% url 'catalogos:producto_crear' catalogo.pk %}">Agregar producto</a> |
+      <a href="{% url 'catalogos:editar' catalogo.pk %}">Editar catálogo</a> |
+      <a href="{% url 'catalogos:eliminar' catalogo.pk %}">Eliminar catálogo</a>
+    </p>
+  {% endif %}
+  <p><a href="{% url 'catalogos:lista' %}">Volver al listado</a></p>
+</div>
+{% endblock %}

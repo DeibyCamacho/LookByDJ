@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="600" height="900" role="img" aria-label="Profesional de belleza - placeholder">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FDF4FF"/>
+      <stop offset="55%" stop-color="#E5D1FF"/>
+      <stop offset="100%" stop-color="#EAF6FF"/>
+    </linearGradient>
+    <linearGradient id="figura" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#DB65DF"/>
+      <stop offset="100%" stop-color="#873DE0"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="url(#fondo)"/>
+  <circle cx="300" cy="330" r="120" fill="url(#figura)" opacity="0.90"/>
+  <path d="M120 900 C120 640 200 470 300 470 C400 470 480 640 480 900 Z" fill="url(#figura)" opacity="0.90"/>
+  <circle cx="300" cy="320" r="82" fill="#FFE9F4" opacity="0.95"/>
+  <path d="M212 285 C230 200 370 200 388 285 C370 240 230 240 212 285 Z" fill="#51228F" opacity="0.55"/>
+  <text x="300" y="700" text-anchor="middle" font-family="DM Sans, Arial, sans-serif" font-size="34" font-weight="700" fill="#51228F" letter-spacing="4">LOOKBY</text>
+  <text x="300" y="740" text-anchor="middle" font-family="DM Sans, Arial, sans-serif" font-size="16" fill="#696773">Descubre tu mejor versión</text>
+</svg>

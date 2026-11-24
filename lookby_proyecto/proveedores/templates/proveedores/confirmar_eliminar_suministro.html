@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Quitar producto del proveedor | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Quitar producto del proveedor</h2>
+  <p>¿Quitar <strong>{{ suministro.producto.nombre }}</strong> de {{ proveedor.nombre }}?</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Sí, quitar</button>
+      <a class="btn-secundario" href="{% url 'proveedores:detalle' proveedor.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

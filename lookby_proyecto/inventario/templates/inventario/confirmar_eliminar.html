@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar inventario | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Eliminar registro de inventario</h2>
+  <p>¿Eliminar el inventario de <strong>{{ inventario.producto.nombre }}</strong> en {{ inventario.local.nombre }}?</p>
+  {% if usado_en_catalogos %}
+    <p><strong>No se puede eliminar:</strong> este registro aparece en uno o más catálogos.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit" {% if usado_en_catalogos %}disabled{% endif %}>Sí, eliminar</button>
+      <a class="btn-secundario" href="{% url 'inventario:detalle' inventario.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

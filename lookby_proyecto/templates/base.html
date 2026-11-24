@@ -1,37 +1,79 @@
-{# PLANTILLA PROVISIONAL de Jhon: Sol es la responsable de base.html; reemplazar al integrar. #}
+{% load static %}
+{% load permisos %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}LookBy{% endblock %}</title>
-  {% load static %}
-  {% block extra_head %}{% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LookBy | Encuentra tu estilo{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'inicio/css/home.css' %}?v=3">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <header>
-    <h1><a href="/">LookBy</a></h1>
-    <nav>
-      <a href="{% url 'locales:lista' %}">Locales</a>
-      {% if user.is_authenticated %}
-        <a href="{% url 'usuarios:perfil' %}">{{ user.nombre }}</a>
-        <form method="post" action="{% url 'usuarios:salir' %}" style="display:inline">
-          {% csrf_token %}
-          <button type="submit">Cerrar sesión</button>
-        </form>
-      {% else %}
-        <a href="{% url 'usuarios:entrar' %}">Entrar</a>
-        <a href="{% url 'usuarios:registro' %}">Registrarse</a>
-      {% endif %}
-    </nav>
-  </header>
-  {% if messages %}
-    <ul class="mensajes">
-      {% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}
-    </ul>
-  {% endif %}
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+
+    <main class="page-container">
+        <div class="main-card">
+
+            <!-- NAVEGACIÓN -->
+            <header class="navbar">
+                <a href="{% url 'inicio:home' %}" class="logo">LOOK<span>BY.</span></a>
+
+                <nav class="nav-links">
+                    <a href="{% url 'servicios:lista' %}">Servicios</a>
+                    <a href="{% url 'profesionales:lista' %}">Profesionales</a>
+                    <a href="{% url 'locales:lista' %}">Locales</a>
+                    <a href="{% url 'productos:lista' %}">Productos</a>
+                    <a href="{% url 'catalogos:lista' %}">Catálogos</a>
+                    <a href="{% url 'citas:lista' %}">Citas</a>
+                    <a href="{% url 'pedidos:lista' %}">Pedidos</a>
+                    <a href="{% url 'calificaciones:lista' %}">Calificaciones</a>
+                    <a href="{% url 'mapas:lista' %}">Mapa</a>
+                    {% if user|es_admin %}
+                        <a href="{% url 'inventario:lista' %}">Inventario</a>
+                        <a href="{% url 'proveedores:lista' %}">Proveedores</a>
+                        <a href="{% url 'usuarios:lista' %}">Usuarios</a>
+                    {% endif %}
+                    <a href="#contacto">Contacto</a>
+                </nav>
+
+                <div class="nav-actions">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'usuarios:perfil' %}" class="btn-start">Mi perfil</a>
+                        <form method="post" action="{% url 'usuarios:salir' %}" class="logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-salir">Salir</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'usuarios:registro' %}" class="btn-start">Registrarse</a>
+                        <a href="{% url 'usuarios:entrar' %}" class="btn-start">Iniciar sesión</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            {% if messages %}
+                <ul class="mensajes">
+                    {% for mensaje in messages %}
+                        <li class="{{ mensaje.tags }}">{{ mensaje }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+
+        </div>
+    </main>
+
+    <footer class="footer" id="contacto">
+        <p>© 2026 LOOKBY. Todos los derechos reservados.</p>
+    </footer>
+
+{% block extra_js %}{% endblock %}
+
 </body>
 </html>

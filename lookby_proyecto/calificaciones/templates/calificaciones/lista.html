@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load permisos %}
+{% block title %}Calificaciones | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>Calificaciones</h2>
+{% if user.is_authenticated %}
+  <p><a href="{% url 'calificaciones:crear' %}">+ Dejar una calificación</a></p>
+{% endif %}
+<ul>
+  {% for calificacion in calificaciones %}
+    <li>
+      <a href="{% url 'calificaciones:detalle' pk=calificacion.pk %}">{{ calificacion.cliente }}</a>
+      | {{ calificacion.puntuacion }}/5
+      | {{ calificacion.local|default:calificacion.profesional|default:"-" }}
+      | {{ calificacion.comentario }}
+      {% if user.is_authenticated and calificacion.cliente_id == user.id or user|es_admin %}
+        <a href="{% url 'calificaciones:editar' pk=calificacion.pk %}">Editar</a>
+        <a href="{% url 'calificaciones:eliminar' pk=calificacion.pk %}">Eliminar</a>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>Aún no hay calificaciones.</li>
+  {% endfor %}
+</ul>
+</div>
+{% endblock %}

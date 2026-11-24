@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Quitar producto del catálogo | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Quitar producto del catálogo</h2>
+  <p>¿Quitar <strong>{{ item.inventario.producto.nombre }}</strong> de {{ catalogo.nombre }}?</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Sí, quitar</button>
+      <a class="btn-secundario" href="{% url 'catalogos:detalle' catalogo.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

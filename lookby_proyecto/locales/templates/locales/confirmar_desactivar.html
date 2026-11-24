@@ -1,11 +1,15 @@
 {% extends 'base.html' %}
 {% block title %}Desactivar local | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Desactivar local</h2>
 <p>¿Seguro que quieres desactivar <strong>{{ local.nombre }}</strong>? Dejará de mostrarse al público, pero se conserva su historial.</p>
 <form method="post">
   {% csrf_token %}
-  <button type="submit">Sí, desactivar</button>
-  <a href="{% url 'locales:detalle' local.pk %}">Cancelar</a>
+  <div class="acciones">
+    <button type="submit">Sí, desactivar</button>
+    <a class="btn-secundario" href="{% url 'locales:detalle' local.pk %}">Cancelar</a>
+  </div>
 </form>
+</div>
 {% endblock %}

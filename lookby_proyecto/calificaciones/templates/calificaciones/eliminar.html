@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar calificación | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Eliminar calificación #{{ calificacion.pk }}</h2>
+  <p>¿Eliminar la calificación de {{ calificacion.cliente }} ({{ calificacion.puntuacion }}/5)?</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="acciones">
+      <button type="submit">Eliminar</button>
+      <a class="btn-secundario" href="{% url 'calificaciones:detalle' pk=calificacion.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}Locales | LookBy{% endblock %}
 {% block content %}
+<div class="contenido">
 <h2>Establecimientos</h2>
 <form method="get">
+  <input type="search" name="nombre" value="{{ nombre }}" placeholder="Buscar por nombre">
   <input type="search" name="ciudad" value="{{ ciudad }}" placeholder="Filtrar por ciudad">
   <button type="submit">Buscar</button>
 </form>
@@ -15,4 +17,5 @@
   <p>Aún no hay locales registrados.</p>
 {% endfor %}
 {% if user.is_authenticated %}<p><a href="{% url 'locales:crear' %}">Registrar local</a></p>{% endif %}
+</div>
 {% endblock %}

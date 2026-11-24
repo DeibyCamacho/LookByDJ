@@ -17,6 +17,26 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _cargar_env(ruta):
+    """Carga variables de entorno desde un archivo .env sin dependencias extra.
+
+    Las variables ya definidas en el entorno del sistema tienen prioridad.
+    El archivo .env nunca se sube a GitHub (esta en .gitignore).
+    """
+    if not ruta.exists():
+        return
+    for linea in ruta.read_text(encoding='utf-8').splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith('#') or '=' not in linea:
+            continue
+        clave, valor = linea.split('=', 1)
+        clave, valor = clave.strip(), valor.strip().strip('"').strip("'")
+        os.environ.setdefault(clave, valor)
+
+
+_cargar_env(BASE_DIR.parent / '.env')
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
@@ -27,9 +47,11 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+if not DEBUG:
+    ALLOWED_HOSTS += [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
 
 
 # Application definition
@@ -52,6 +74,8 @@ INSTALLED_APPS = [
     'proveedores',
     'calificaciones',
     'mapas',
+    'catalogos',
+    'inicio',
 ]
 
 MIDDLEWARE = [
@@ -97,10 +121,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'lookby'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'USER': os.environ.get('DB_USER', 'lookby'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'lookby123'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 0,
+        'OPTIONS': {'client_encoding': 'UTF8'},
     }
 }
 
@@ -139,7 +165,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email

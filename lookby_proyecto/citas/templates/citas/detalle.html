@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Cita #{{ cita.id }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>Cita #{{ cita.id }}</h2>
+<ul>
+  <li>Servicio: {{ cita.oferta.servicio.nombre }}</li>
+  <li>Profesional: {{ cita.oferta.profesional.usuario.nombre_completo }}</li>
+  <li>Cliente: {{ cita.cliente.nombre_completo }}</li>
+  <li>Inicio: {{ cita.fecha_inicio }}</li>
+  <li>Fin: {{ cita.fecha_fin }}</li>
+  <li>Precio: ${{ cita.precio }}</li>
+  <li>Estado: <span class="badge">{{ cita.estado }}</span></li>
+</ul>
+<div class="acciones">
+  <a class="btn-secundario" href="{% url 'citas:lista' %}">Volver a mis citas</a>
+  {% if puede_cambiar %}
+    <a href="{% url 'citas:editar' cita.pk %}">Reprogramar</a>
+    <form method="post" action="{% url 'citas:cancelar' cita.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-secundario" onclick="return confirm('¿Cancelar la cita?');">Cancelar</button>
+    </form>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

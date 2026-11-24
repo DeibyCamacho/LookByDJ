@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ usuario.nombre_completo }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>{{ usuario.nombre_completo }}</h2>
+  <p><strong>Correo:</strong> {{ usuario.correo }}</p>
+  <p><strong>Teléfono:</strong> {{ usuario.telefono|default:'No registrado' }}</p>
+  <p><strong>Estado:</strong> {% if usuario.is_active %}Activa{% else %}Inactiva{% endif %}</p>
+  <p><strong>Roles:</strong>
+    {% for rol in usuario.roles.all %}{{ rol }}{% if not forloop.last %}, {% endif %}{% empty %}Sin roles{% endfor %}
+  </p>
+  <p>
+    <a href="{% if es_propio %}{% url 'usuarios:perfil' %}{% else %}{% url 'usuarios:lista' %}{% endif %}">Volver</a>
+    | <a href="{% url 'usuarios:editar' usuario.pk %}">Editar cuenta</a>
+    {% if usuario.is_active %}
+      | <a href="{% url 'usuarios:desactivar' usuario.pk %}">Desactivar</a>
+    {% endif %}
+  </p>
+</div>
+{% endblock %}

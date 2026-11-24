@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Usuarios | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Cuentas registradas</h2>
+  <form method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por correo o nombre">
+    <button type="submit">Buscar</button>
+  </form>
+  <ul class="lista-usuarios">
+    {% for usuario in usuarios %}
+      <li>
+        <a href="{% url 'usuarios:detalle' usuario.pk %}">{{ usuario.nombre_completo }}</a>
+        — {{ usuario.correo }}
+        {% if not usuario.is_active %}<em>(inactiva)</em>{% endif %}
+        <span>
+          <a href="{% url 'usuarios:editar' usuario.pk %}">Editar</a>
+          {% if usuario.is_active %}
+            | <a href="{% url 'usuarios:desactivar' usuario.pk %}">Desactivar</a>
+          {% endif %}
+        </span>
+      </li>
+    {% empty %}
+      <li>No hay cuentas que coincidan con la búsqueda.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

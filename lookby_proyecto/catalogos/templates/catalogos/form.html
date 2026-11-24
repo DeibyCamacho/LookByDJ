@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>{{ titulo }}</h2>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="acciones">
+      <button type="submit">Guardar catálogo</button>
+      {% if catalogo %}
+        <a class="btn-secundario" href="{% url 'catalogos:detalle' catalogo.pk %}">Cancelar</a>
+      {% else %}
+        <a class="btn-secundario" href="{% url 'catalogos:lista' %}">Cancelar</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

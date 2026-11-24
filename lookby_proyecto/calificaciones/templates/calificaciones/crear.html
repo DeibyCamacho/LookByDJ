@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Calificar | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>Calificar un local o profesional</h2>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="acciones">
+    <button type="submit">Enviar calificación</button>
+    <a class="btn-secundario" href="{% url 'calificaciones:lista' %}">Volver a calificaciones</a>
+  </div>
+</form>
+</div>
+{% endblock %}

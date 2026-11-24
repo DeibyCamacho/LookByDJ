@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Ofertas de servicios | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+<h2>Ofertas de servicios</h2>
+{% if user.is_authenticated %}<p><a href="{% url 'servicios:oferta_crear' %}">+ Nueva oferta</a></p>{% endif %}
+<ul>
+  {% for oferta in ofertas %}
+    <li><a href="{% url 'servicios:oferta_detalle' oferta.pk %}">{{ oferta }}</a>
+      {% if oferta.local %}({{ oferta.local.nombre }}){% endif %}
+      — ${{ oferta.precio }} / {{ oferta.duracion }} min
+      {% if oferta.activa %}<span class="badge">Activa</span>{% else %}<span class="badge">Inactiva</span>{% endif %}</li>
+  {% empty %}
+    <li>Aún no hay ofertas registradas.</li>
+  {% endfor %}
+</ul>
+<p><a href="{% url 'servicios:lista' %}">Volver a servicios</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Pedido #{{ pedido.pk }} | LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Pedido #{{ pedido.pk }}</h2>
+  <p><strong>Cliente:</strong> {{ pedido.cliente }} &middot; <strong>Local:</strong> {{ pedido.local }}</p>
+  <p><strong>Fecha:</strong> {{ pedido.fecha_creacion|date:"d/m/Y H:i" }} &middot; <strong>Estado:</strong> {{ pedido.get_estado_display }}</p>
+  <p><strong>Dirección de entrega:</strong> {{ pedido.direccion_entrega|default:"No indicada" }}</p>
+
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody>
+      {% for detalle in pedido.detalles.all %}
+        <tr>
+          <td>{{ detalle.producto.nombre }}</td>
+          <td>{{ detalle.cantidad }}</td>
+          <td>${{ detalle.precio_unitario }}</td>
+          <td>${{ detalle.subtotal }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Este pedido no tiene productos.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><th colspan="3">Total</th><th>${{ pedido.total }}</th></tr>
+    </tfoot>
+  </table>
+
+  <div class="acciones">
+    <a class="btn-secundario" href="{% url 'pedidos:lista' %}">Volver a pedidos</a>
+    {% if pedido.estado != 'CANCELADO' and pedido.estado != 'ENTREGADO' %}
+      <a href="{% url 'pedidos:editar' pk=pedido.pk %}">Editar dirección</a>
+      <a href="{% url 'pedidos:eliminar' pk=pedido.pk %}">Cancelar pedido</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

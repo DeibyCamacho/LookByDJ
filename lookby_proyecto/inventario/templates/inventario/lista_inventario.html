@@ -1,115 +1,45 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario por Local - LookBy</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #fafafa;
-            color: #27272a;
-            margin: 0;
-            padding: 0;
-        }
-        header {
-            background: white;
-            border-bottom: 1px solid #e4e4e7;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-size: 24px; font-weight: bold; color: #111; }
-        .logo span { color: #e11d48; }
-        nav a { text-decoration: none; color: #52525b; margin: 0 15px; font-weight: 500; }
-        nav a.active { color: #e11d48; border-bottom: 2px solid #e11d48; padding-bottom: 4px; }
-        
-        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
-        h2 {
-            font-size: 26px;
-            margin-bottom: 25px;
-            color: #18181b;
-            border-left: 4px solid #e11d48;
-            padding-left: 12px;
-        }
-        .table-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            overflow: hidden;
-            border: 1px solid #f1f1f5;
-        }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th {
-            background-color: #f4f4f5;
-            padding: 16px 20px;
-            font-size: 13px;
-            text-transform: uppercase;
-            color: #52525b;
-            letter-spacing: 0.5px;
-        }
-        td { padding: 16px 20px; border-top: 1px solid #f4f4f5; font-size: 15px; }
-        tr:hover { background-color: #fafafa; }
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .stock-ok { background: #dcfce7; color: #166534; }
-        .stock-bajo { background: #ffe4e6; color: #e11d48; }
-    </style>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block title %}Inventario por Local - LookBy{% endblock %}
+{% block content %}
+<div class="contenido">
+  <h2>Control de stock por local</h2>
+  <p><a class="btn-accion" href="{% url 'inventario:crear' %}">+ Nuevo registro de inventario</a></p>
 
-    <header>
-        <div class="logo">Lotus <span>LookBy</span></div>
-        <nav>
-            <a href="/productos/">Productos</a>
-            <a href="/inventario/" class="active">Inventario</a>
-            <a href="#">Pedidos</a>
-            <a href="/admin/">Admin</a>
-        </nav>
-    </header>
-
-    <div class="container">
-        <h2>Control de Stock por Local</h2>
-        <div class="table-card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Local / Sede</th>
-                        <th>Cantidad Disponible</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in inventarios %}
-                    <tr>
-                        <td><strong>{{ item.producto.nombre }}</strong></td>
-                        <td>{{ item.local }}</td>
-                        <td>{{ item.cantidad }} unidades</td>
-                        <td>
-                            {% if item.cantidad > 5 %}
-                                <span class="badge stock-ok">Disponible</span>
-                            {% else %}
-                                <span class="badge stock-bajo">Stock Bajo</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: #71717a;">
-                            No hay registros de inventario aún. Agrega existencias desde el panel de administración.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-</body>
-</html>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Local / Sede</th>
+        <th>Cantidad disponible</th>
+        <th>Precio de venta</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inventarios %}
+        <tr>
+          <td><strong>{{ item.producto.nombre }}</strong></td>
+          <td>{{ item.local }}</td>
+          <td>{{ item.stock_actual }} unidades</td>
+          <td>${{ item.precio_venta }}</td>
+          <td>
+            {% if item.stock_actual > 5 %}
+              <span class="badge ok">Disponible</span>
+            {% else %}
+              <span class="badge warn">Stock bajo</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'inventario:detalle' item.pk %}">Detalle</a> |
+            <a href="{% url 'inventario:editar' item.pk %}">Editar</a> |
+            <a href="{% url 'inventario:eliminar' item.pk %}">Eliminar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No hay registros de inventario aún. <a href="{% url 'inventario:crear' %}">Agrega el primero</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
