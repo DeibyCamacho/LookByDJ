@@ -20,9 +20,11 @@ Desde la carpeta del repositorio:
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env      # si no existe; ajusta credenciales si quieres
-.\.venv\Scripts\python.exe lookby_proyecto\manage.py migrate
-.\.venv\Scripts\python.exe lookby_proyecto\manage.py cargar_demo
-.\.venv\Scripts\python.exe lookby_proyecto\manage.py runserver
+cd lookby_proyecto
+..\.venv\Scripts\python.exe manage.py migrate
+..\.venv\Scripts\python.exe manage.py cargar_demo
+..\.venv\Scripts\python.exe manage.py runserver
+cd ..
 ```
 
 Abrir <http://127.0.0.1:8000/>.
