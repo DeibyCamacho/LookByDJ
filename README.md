@@ -68,6 +68,23 @@ El comando `cargar_demo` crea datos de prueba (idempotente: se puede ejecutar va
 | carlos@lookby.com | `demo1234` | PROFESIONAL |
 | ana@lookby.com | `demo1234` | CLIENTE |
 
+### Norma de nombres de usuario (calidad)
+
+Se aplica igual en el registro, en "Mi perfil" y en la edición desde el administrador:
+
+| Campo | Regla |
+|---|---|
+| `nombre` | De **3 a 30 caracteres**. Solo **letras y espacios**. Sin números ni signos (`@`, `.`, `-`, `_`, etc.). Las tildes y la `ñ` cuentan como letras, así que `José` y `Dueño` son válidos. |
+| `correo` | De **3 a 30 caracteres**, con formato de correo. Solo letras, números, punto, guión, guion bajo, más y la arroba. |
+| `apellido` | Hasta **40 caracteres** (límite del equipo; la norma de nombres no lo cambia). |
+
+- Válidos: `Ana María`, `José Dueño`, `ana@lookby.com`.
+- Inválidos: `Ana1`, `Ana@`, `Juan-Pérez`, `ana#1@lookby.com`.
+
+La regla está en `usuarios/validators.py`, se aplica en el modelo (migración
+`0004_alter_usuario_correo_alter_usuario_nombre.py`) y se muestra como texto de ayuda en los formularios.
+Documentación completa: [`docs/NORMA_NOMBRES_USUARIO.md`](docs/NORMA_NOMBRES_USUARIO.md).
+
 ## 5. Módulos y rutas
 
 | Módulo | Ruta principal |

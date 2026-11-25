@@ -1,13 +1,36 @@
+"""Formularios de altas y edición de usuarios de LookBy.
+
+Los formularios que escriben ``nombre`` o ``correo`` muestran la norma de
+calidad como texto de ayuda y delegan la validación en los validadores del
+modelo (ver :mod:`usuarios.validators`). Así la regla es idéntica en el
+registro, en el perfil y en la administración.
+"""
+
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm
 
 from .models import LONGITUD_MAXIMA_NOMBRE, Rol, Usuario
+from .validators import CORREO_MAX, CORREO_MIN, NOMBRE_MAX, NOMBRE_MIN
 
-MAX_NOMBRE = str(LONGITUD_MAXIMA_NOMBRE)
+# El apellido conserva el límite de 40 del equipo; el nombre usa la norma (30).
+MAX_APELLIDO = str(LONGITUD_MAXIMA_NOMBRE)
+MAX_NOMBRE_USUARIO = str(NOMBRE_MAX)
+
+# Textos construidos con las constantes de la norma para que no se desactualicen.
+AYUDA_NOMBRE = (
+    f'De {NOMBRE_MIN} a {NOMBRE_MAX} caracteres. Solo letras y espacios; '
+    'sin números ni caracteres especiales.'
+)
+AYUDA_CORREO = (
+    f'De {CORREO_MIN} a {CORREO_MAX} caracteres. Use un correo válido '
+    '(por ejemplo ana@lookby.com), sin otros signos.'
+)
 
 
 class RegistroForm(forms.ModelForm):
+    """Alta de clientes: valida la norma y comprueba contraseñas y correo único."""
+
     password1 = forms.CharField(
         label='Contraseña',
         strip=False,
@@ -29,12 +52,13 @@ class RegistroForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'correo', 'telefono']
+        help_texts = {'nombre': AYUDA_NOMBRE, 'correo': AYUDA_CORREO}
         widgets = {
             'nombre': forms.TextInput(attrs={
-                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE_USUARIO,
             }),
             'apellido': forms.TextInput(attrs={
-                'placeholder': 'Tu apellido', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Tu apellido', 'maxlength': MAX_APELLIDO,
             }),
             'correo': forms.EmailInput(attrs={'placeholder': 'tu@correo.com'}),
             'telefono': forms.TextInput(attrs={'placeholder': '3001234567'}),
@@ -97,15 +121,18 @@ class LoginForm(AuthenticationForm):
 
 
 class PerfilForm(forms.ModelForm):
+    """Edición de los datos personales; el correo no se puede cambiar aquí."""
+
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'telefono']
+        help_texts = {'nombre': AYUDA_NOMBRE}
         widgets = {
             'nombre': forms.TextInput(attrs={
-                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Tu nombre', 'maxlength': MAX_NOMBRE_USUARIO,
             }),
             'apellido': forms.TextInput(attrs={
-                'placeholder': 'Tu apellido', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Tu apellido', 'maxlength': MAX_APELLIDO,
             }),
         }
 
@@ -137,12 +164,13 @@ class UsuarioAdminForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellido', 'correo', 'telefono', 'is_active', 'roles']
+        help_texts = {'nombre': AYUDA_NOMBRE, 'correo': AYUDA_CORREO}
         widgets = {
             'nombre': forms.TextInput(attrs={
-                'placeholder': 'Nombre', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Nombre', 'maxlength': MAX_NOMBRE_USUARIO,
             }),
             'apellido': forms.TextInput(attrs={
-                'placeholder': 'Apellido', 'maxlength': MAX_NOMBRE,
+                'placeholder': 'Apellido', 'maxlength': MAX_APELLIDO,
             }),
         }
 

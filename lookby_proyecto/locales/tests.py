@@ -161,7 +161,7 @@ class ListadoYDesactivarTests(LocalesBase):
 
 class ModeloLocalTests(TestCase):
     def test_borrar_dueno_no_borra_el_local(self):
-        dueno = Usuario.objects.create_user('dueno2@example.com', CLAVE, nombre='Dueño 2')
+        dueno = Usuario.objects.create_user('dueno2@example.com', CLAVE, nombre='Dueño Dos')
         local = Local.objects.create(
             nombre='Con historial', direccion='Calle 2', ciudad='Medellín', usuario=dueno,
         )

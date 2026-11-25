@@ -1,6 +1,7 @@
 from io import StringIO
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
@@ -10,6 +11,7 @@ from locales.models import Local
 from .forms import PerfilForm, RegistroForm, UsuarioAdminForm
 from .models import LONGITUD_MAXIMA_NOMBRE, Rol, Usuario
 from .templatetags.permisos import es_admin_filtro
+from .validators import CORREO_MAX, NOMBRE_MAX
 
 CLAVE = 'Clave-Segura-2026'
 
@@ -236,16 +238,23 @@ class CargarDemoTests(TestCase):
 
 
 class LongitudNombresTests(TestCase):
-    """Nombres y apellidos de personas: hasta 40 caracteres, sin errores de BD."""
+    """Longitud de la norma: nombre 3-30, apellido hasta 40, correo hasta 30."""
 
-    def test_modelo_tiene_limite_de_40_en_nombre_y_apellido(self):
+    def test_modelo_tiene_los_limites_de_la_norma(self):
         self.assertEqual(LONGITUD_MAXIMA_NOMBRE, 40)
-        for campo in ('nombre', 'apellido'):
+        self.assertEqual(NOMBRE_MAX, 30)
+        self.assertEqual(CORREO_MAX, 30)
+        limites = {
+            'nombre': NOMBRE_MAX,
+            'apellido': LONGITUD_MAXIMA_NOMBRE,
+            'correo': CORREO_MAX,
+        }
+        for campo, maximo in limites.items():
             with self.subTest(campo=campo):
-                self.assertEqual(Usuario._meta.get_field(campo).max_length, 40)
+                self.assertEqual(Usuario._meta.get_field(campo).max_length, maximo)
 
-    def test_registro_guarda_nombres_y_apellidos_de_40_caracteres(self):
-        nombre, apellido = 'N' * 40, 'A' * 40
+    def test_registro_guarda_nombre_de_30_y_apellido_de_40(self):
+        nombre, apellido = 'N' * NOMBRE_MAX, 'A' * LONGITUD_MAXIMA_NOMBRE
         respuesta = self.client.post(reverse('usuarios:registro'), datos_registro(
             nombre=nombre, apellido=apellido, correo='largo@example.com',
         ))
@@ -254,22 +263,92 @@ class LongitudNombresTests(TestCase):
         self.assertEqual(usuario.nombre, nombre)
         self.assertEqual(usuario.apellido, apellido)
 
-    def test_registro_rechaza_nombres_y_apellidos_de_41_caracteres(self):
-        for campo in ('nombre', 'apellido'):
+    def test_registro_rechaza_nombre_de_31_y_apellido_de_41(self):
+        casos = (
+            ('nombre', NOMBRE_MAX + 1),
+            ('apellido', LONGITUD_MAXIMA_NOMBRE + 1),
+        )
+        for campo, longitud in casos:
             with self.subTest(campo=campo):
                 datos = datos_registro(correo=f'{campo}_largo@example.com')
-                datos[campo] = 'X' * 41
+                datos[campo] = 'X' * longitud
                 formulario = RegistroForm(data=datos)
                 self.assertFalse(formulario.is_valid())
                 self.assertIn(campo, formulario.errors)
 
-    def test_formularios_de_perfil_y_admin_usan_el_mismo_limite(self):
+    def test_formularios_de_perfil_y_admin_usan_los_mismos_limites(self):
         instancia = Usuario(correo='ejemplo@example.com', nombre='Ejemplo')
+        limites = {'nombre': str(NOMBRE_MAX), 'apellido': str(LONGITUD_MAXIMA_NOMBRE)}
         for clase in (PerfilForm, UsuarioAdminForm):
             with self.subTest(formulario=clase.__name__):
                 formulario = clase(instance=instancia)
-                for campo in ('nombre', 'apellido'):
-                    self.assertEqual(formulario.fields[campo].max_length, 40)
+                for campo, maximo in limites.items():
+                    self.assertEqual(formulario.fields[campo].max_length, int(maximo))
                     self.assertEqual(
-                        formulario.fields[campo].widget.attrs['maxlength'], '40'
+                        formulario.fields[campo].widget.attrs['maxlength'], maximo
                     )
+
+
+class NormaNombresTests(TestCase):
+    """Nombre: 3-30 letras/espacios. Correo: 3-30, formato válido, sin signos raros."""
+
+    def registrar(self, **extra):
+        return self.client.post(reverse('usuarios:registro'), datos_registro(**extra))
+
+    def test_registro_acepta_nombre_y_correo_dentro_de_la_norma(self):
+        respuesta = self.registrar(nombre='Ana María', correo='ana.maria@lookby.com')
+        self.assertRedirects(respuesta, reverse('usuarios:perfil'))
+        self.assertTrue(Usuario.objects.filter(correo='ana.maria@lookby.com').exists())
+
+    def test_registro_acepta_tildes_y_enie_porque_son_letras(self):
+        respuesta = self.registrar(nombre='José Dueño')
+        self.assertRedirects(respuesta, reverse('usuarios:perfil'))
+
+    def test_registro_rechaza_numeros_y_caracteres_especiales(self):
+        nombres = ('Ana@', 'Ana_1', 'Ana-123', "O'Brien", 'Ana.Maria', 'Juan2')
+        for nombre in nombres:
+            with self.subTest(nombre=nombre):
+                respuesta = self.registrar(nombre=nombre)
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertContains(respuesta, 'solo puede contener letras y espacios')
+        self.assertEqual(Usuario.objects.count(), 0)
+
+    def test_registro_rechaza_nombre_corto_y_largo(self):
+        for nombre in ('An', 'A' * (NOMBRE_MAX + 1)):
+            with self.subTest(longitud=len(nombre)):
+                respuesta = self.registrar(nombre=nombre)
+                self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(Usuario.objects.count(), 0)
+
+    def test_registro_rechaza_correo_mas_largo_de_30(self):
+        respuesta = self.registrar(correo='a' * 20 + '@lookby.com')  # 31 caracteres
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(Usuario.objects.count(), 0)
+
+    def test_registro_rechaza_correo_con_signos_no_permitidos(self):
+        respuesta = self.registrar(correo='ana#1@lookby.com')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(Usuario.objects.count(), 0)
+
+    def test_perfil_no_guarda_un_nombre_que_viola_la_norma(self):
+        usuario = Usuario.objects.create_user('ana@example.com', CLAVE, nombre='Ana')
+        self.client.force_login(usuario)
+        respuesta = self.client.post(reverse('usuarios:perfil'), {
+            'nombre': 'Ana@', 'apellido': 'Pérez', 'telefono': '300',
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        usuario.refresh_from_db()
+        self.assertEqual(usuario.nombre, 'Ana')
+
+    def test_full_clean_rechaza_nombre_y_correo_invalidos(self):
+        usuario = Usuario(correo='ana#1@example.com', nombre='Ana1')
+        usuario.set_password(CLAVE)
+        with self.assertRaises(ValidationError) as error:
+            usuario.full_clean()
+        self.assertIn('nombre', error.exception.message_dict)
+        self.assertIn('correo', error.exception.message_dict)
+
+    def test_create_user_tambien_aplica_la_norma(self):
+        with self.assertRaises(ValidationError) as error:
+            Usuario.objects.create_user('ana@example.com', CLAVE, nombre='Ana@')
+        self.assertIn('nombre', error.exception.message_dict)
