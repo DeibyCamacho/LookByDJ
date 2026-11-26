@@ -68,6 +68,19 @@ El comando `cargar_demo` crea datos de prueba (idempotente: se puede ejecutar va
 | carlos@lookby.com | `demo1234` | PROFESIONAL |
 | ana@lookby.com | `demo1234` | CLIENTE |
 
+`demo1234` es la contraseña **inicial**, solo para desarrollo. `cargar_demo` ya no
+sobrescribe contraseñas cambiadas: si vuelves a ejecutarlo, tus claves se conservan.
+Antes de desplegar, cambia las tres claves y define `DJANGO_DEBUG=0`, una
+`DJANGO_SECRET_KEY` larga y `DJANGO_ALLOWED_HOSTS`.
+
+### Recuperación y cambio de contraseña
+
+- `/usuarios/recuperar/` envía un enlace válido por una hora (en desarrollo se
+  imprime en la consola; en producción usa SMTP por variables de entorno).
+- `/usuarios/cambiar-clave/` permite cambiar la contraseña estando logueado.
+- El login bloquea temporalmente tras 5 intentos fallidos y nunca revela si una
+  cuenta existe o está desactivada.
+
 ### Norma de nombres de usuario (calidad)
 
 Se aplica igual en el registro, en "Mi perfil" y en la edición desde el administrador:
@@ -76,14 +89,21 @@ Se aplica igual en el registro, en "Mi perfil" y en la edición desde el adminis
 |---|---|
 | `nombre` | De **3 a 30 caracteres**. Solo **letras y espacios**. Sin números ni signos (`@`, `.`, `-`, `_`, etc.). Las tildes y la `ñ` cuentan como letras, así que `José` y `Dueño` son válidos. |
 | `correo` | De **3 a 30 caracteres**, con formato de correo. Solo letras, números, punto, guión, guion bajo, más y la arroba. |
-| `apellido` | Hasta **40 caracteres** (límite del equipo; la norma de nombres no lo cambia). |
+| `apellido` | De **3 a 30 caracteres**, con la **misma regla que `nombre`** (letras y espacios). |
+| `telefono` | De **7 a 15 dígitos**; se admite `+` inicial y espacios. Un celular colombiano de 10 dígitos debe empezar por 3. |
 
-- Válidos: `Ana María`, `José Dueño`, `ana@lookby.com`.
-- Inválidos: `Ana1`, `Ana@`, `Juan-Pérez`, `ana#1@lookby.com`.
+- Válidos: `Ana María`, `José Dueño`, `ana@lookby.com`, `300 123 4567`.
+- Inválidos: `Ana1`, `Ana@`, `Juan-Pérez`, `ana#1@lookby.com`, `*+?-}{1234`, `hola soyun numero`.
 
-La regla está en `usuarios/validators.py`, se aplica en el modelo (migración
-`0004_alter_usuario_correo_alter_usuario_nombre.py`) y se muestra como texto de ayuda en los formularios.
+La regla está en `usuarios/validators.py`, se aplica en el modelo (migraciones
+`0004` y `0005`) y se muestra como texto de ayuda en los formularios. La migración
+`0005` sanea los datos legacy antes de encoger las columnas.
 Documentación completa: [`docs/NORMA_NOMBRES_USUARIO.md`](docs/NORMA_NOMBRES_USUARIO.md).
+
+### Verificación integral del 26/11/2026
+
+- [`docs/VERIFICACION_CORRECCIONES_2026-11-26.md`](docs/VERIFICACION_CORRECCIONES_2026-11-26.md): hallazgos, cambios, migraciones, 195 pruebas y verificación manual de cada corrección.
+- [`docs/SEGURIDAD_Y_CONFIGURACION.md`](docs/SEGURIDAD_Y_CONFIGURACION.md): variables de entorno, `check --deploy`, páginas de error, login y contraseñas.
 
 ## 5. Módulos y rutas
 
