@@ -12,6 +12,8 @@
 |---|---|---|---|
 | `nombre` (nombre visible del usuario) | **3 a 30** | Letras (incluidas tildes y `ñ`) y espacios entre palabras | Números, `@`, `.`, `-`, `_`, `'`, `#`, cualquier otro signo. Espacios al inicio o al final |
 | `correo` (login del usuario) | **3 a 30** | Letras, números, `@`, punto, guión, guion bajo y `+` | `#`, `$`, `!`, comillas, `%`, etc. Dos `@`, dominio sin punto |
+| `apellido` (26/11/2026) | **3 a 30** | La **misma regla que `nombre`**: letras (tildes y `ñ`) y espacios | Números y signos. No puede quedar vacío |
+| `telefono` (26/11/2026) | **7 a 15 dígitos** | Un `+` inicial, espacios y dígitos; celular CO de 10 dígitos empieza por 3 | Letras y signos distintos de `+` |
 
 ### Ejemplos
 
@@ -33,10 +35,11 @@
 > `_SOLO_LETRAS_Y_ESPACIOS` en `usuarios/validators.py` por un patrón ASCII y se
 > revisan los datos existentes antes de aplicar el cambio.
 
-> **Nota sobre `apellido`:** el commit anterior del equipo (`c890c55`) fijó los apellidos
-> a 40 caracteres. Esa decisión se conserva: la norma cambia `nombre` a 30 y deja
-> `apellido` en 40. Por eso las pruebas `LongitudNombresTests` se ajustaron a los
-> dos límites.
+> **Actualización del 26/11/2026:** el apellido pasó de 40 a **30** caracteres y usa
+> exactamente el mismo validador que el nombre (`ValidarNombrePersona`). Ya no hay
+> dos reglas distintas para `nombre` y `apellido`. La migración `0005` sanea los
+> datos legacy antes de encoger la columna: apellidos vacíos o con signos pasan a
+> `Demo`, y teléfonos con letras pierden los caracteres no numéricos.
 
 ---
 

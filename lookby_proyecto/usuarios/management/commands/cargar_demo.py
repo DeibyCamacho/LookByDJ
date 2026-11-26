@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
@@ -12,7 +12,7 @@ from locales.models import Local
 from pedidos.models import Pedido
 from pedidos.services import crear_pedido
 from productos.models import Producto
-from profesionales.models import Profesional
+from profesionales.models import Horario, Profesional
 from proveedores.models import Proveedor, ProveedorProducto
 from servicios.models import OfertaServicio, Servicio
 from usuarios.models import Rol, Usuario
@@ -26,19 +26,22 @@ class Command(BaseCommand):
     help = 'Carga datos de ejemplo para probar LookBy (se puede repetir).'
 
     def handle(self, *args, **options):
+        self.cuentas_nuevas = 0
         roles = {}
         for nombre, _ in Rol.NOMBRES:
             roles[nombre], _ = Rol.objects.get_or_create(nombre=nombre)
 
         admin = self.crear_usuario(
             'admin@lookby.com', 'Admin', roles['ADMINISTRADOR'],
-            is_staff=True, is_superuser=True,
+            telefono='3001112233', is_staff=True, is_superuser=True,
         )
         cliente = self.crear_usuario(
             'ana@lookby.com', 'Ana', roles['CLIENTE'],
+            telefono='3004445566',
         )
         pro_usuario = self.crear_usuario(
             'carlos@lookby.com', 'Carlos', roles['PROFESIONAL'],
+            telefono='3007778899',
         )
         profesional, _ = Profesional.objects.get_or_create(
             usuario=pro_usuario,
@@ -61,6 +64,16 @@ class Command(BaseCommand):
             },
         )
         local.administradores.add(admin)
+
+        # El profesional demo necesita horario: crear_cita rechaza reservas
+        # fuera de jornada (y antes no había ningún Horario cargado).
+        for dia in range(1, 8):
+            Horario.objects.get_or_create(
+                profesional=profesional,
+                local=local,
+                dia_semana=dia,
+                defaults={'hora_inicio': time(8, 0), 'hora_fin': time(20, 0)},
+            )
 
         ofertas = []
         datos_servicios = [
@@ -136,21 +149,31 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(self.style.SUCCESS('Datos de ejemplo cargados (comando idempotente).'))
-        self.stdout.write('Credenciales demo (SOLO desarrollo, no usar en producción):')
-        self.stdout.write(f'  Admin:        admin@lookby.com / {CLAVE_DEMO}')
-        self.stdout.write(f'  Cliente:      ana@lookby.com / {CLAVE_DEMO}')
-        self.stdout.write(f'  Profesional:  carlos@lookby.com / {CLAVE_DEMO}')
-        self.stdout.write(f'Contraseña de las tres cuentas: {CLAVE_DEMO}')
+        if self.cuentas_nuevas:
+            self.stdout.write(
+                'Credenciales iniciales (SOLO desarrollo; cambia la contraseña '
+                f'antes de usar la app en producción): {CLAVE_DEMO}'
+            )
+        else:
+            self.stdout.write(
+                'Las cuentas demo ya existían: se respetaron sus contraseñas '
+                'actuales (el comando nunca las sobrescribe).'
+            )
 
     def crear_usuario(self, correo, nombre, rol, **extra):
+        """Crea la cuenta demo una sola vez y nunca le cambia la contraseña.
+
+        Ejecutar ``cargar_demo`` al arrancar no debe devolverle a nadie la
+        contraseña pública ``demo1234`` si ya la cambió (hallazgo A2).
+        """
+        defaults = {'nombre': nombre, 'apellido': 'Demo', **extra}
         usuario, creado = Usuario.objects.get_or_create(
-            correo=correo,
-            defaults={'nombre': nombre, **extra},
+            correo=correo, defaults=defaults,
         )
-        # Se respeta una contraseña cambiada a mano: solo se (re)establece la
-        # contraseña demo si la cuenta es nueva o ya no coincide.
-        if creado or not usuario.check_password(CLAVE_DEMO):
+        if creado:
+            self.cuentas_nuevas += 1
             usuario.set_password(CLAVE_DEMO)
+            usuario.full_clean()
             usuario.save()
         usuario.roles.add(rol)  # M2M: repetir el comando no duplica roles.
         return usuario

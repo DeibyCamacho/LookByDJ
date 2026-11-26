@@ -1,6 +1,9 @@
+import re
 from io import StringIO
 
 from django.contrib.auth.models import AnonymousUser
+from django.core import mail
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase
@@ -86,7 +89,7 @@ class SesionTests(TestCase):
     def test_perfil_actualiza_datos_pero_no_correo(self):
         self.client.force_login(self.u)
         self.client.post(reverse('usuarios:perfil'), {
-            'nombre': 'Ana María', 'apellido': 'Gómez', 'telefono': '300',
+            'nombre': 'Ana María', 'apellido': 'Gómez', 'telefono': '3001234567',
             'correo': 'otro@example.com',
         })
         self.u.refresh_from_db()
@@ -165,7 +168,7 @@ class CuentasCRUDTests(TestCase):
         rol_pro = Rol.objects.get(nombre=Rol.PROFESIONAL)
         url = reverse('usuarios:editar', args=[self.otro.pk])
         r = self.client.post(url, {
-            'nombre': 'Otro', 'apellido': '', 'telefono': '',
+            'nombre': 'Otro', 'apellido': 'Pérez', 'telefono': '',
             'correo': self.otro.correo, 'is_active': 'on',
             'roles': [rol_pro.pk],
         })
@@ -178,7 +181,7 @@ class CuentasCRUDTests(TestCase):
         self.client.force_login(root)
         url = reverse('usuarios:editar', args=[root.pk])
         r = self.client.post(url, {
-            'nombre': 'Root', 'apellido': '', 'telefono': '',
+            'nombre': 'Root', 'apellido': 'Pérez', 'telefono': '',
             'correo': root.correo, 'is_active': 'on',
             'roles': [self.rol_admin.pk],
         })
@@ -226,35 +229,40 @@ class FiltroPermisosTests(TestCase):
 
 
 class CargarDemoTests(TestCase):
-    def test_cargar_demo_es_idempotente_y_muestra_credenciales(self):
+    def test_cargar_demo_es_idempotente_y_no_restablece_contraseñas(self):
         call_command('cargar_demo', verbosity=0)
         antes = (Usuario.objects.count(), Rol.objects.count(), Local.objects.count())
+        admin = Usuario.objects.get(correo='admin@lookby.com')
+        admin.set_password('Contraseña-Nueva-2026')
+        admin.save()
         salida = StringIO()
         call_command('cargar_demo', stdout=salida)
         despues = (Usuario.objects.count(), Rol.objects.count(), Local.objects.count())
         self.assertEqual(despues, antes)
-        self.assertIn('demo1234', salida.getvalue())
-        self.assertIn('admin@lookby.com', salida.getvalue())
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password('Contraseña-Nueva-2026'))
+        self.assertIn('se respetaron sus contraseñas', salida.getvalue())
+        self.assertIn('admin@lookby.com', Usuario.objects.values_list('correo', flat=True))
 
 
 class LongitudNombresTests(TestCase):
-    """Longitud de la norma: nombre 3-30, apellido hasta 40, correo hasta 30."""
+    """Longitud de la norma: nombre y apellido 3-30, correo hasta 30."""
 
     def test_modelo_tiene_los_limites_de_la_norma(self):
-        self.assertEqual(LONGITUD_MAXIMA_NOMBRE, 40)
+        self.assertEqual(LONGITUD_MAXIMA_NOMBRE, NOMBRE_MAX)
         self.assertEqual(NOMBRE_MAX, 30)
         self.assertEqual(CORREO_MAX, 30)
         limites = {
             'nombre': NOMBRE_MAX,
-            'apellido': LONGITUD_MAXIMA_NOMBRE,
+            'apellido': NOMBRE_MAX,
             'correo': CORREO_MAX,
         }
         for campo, maximo in limites.items():
             with self.subTest(campo=campo):
                 self.assertEqual(Usuario._meta.get_field(campo).max_length, maximo)
 
-    def test_registro_guarda_nombre_de_30_y_apellido_de_40(self):
-        nombre, apellido = 'N' * NOMBRE_MAX, 'A' * LONGITUD_MAXIMA_NOMBRE
+    def test_registro_guarda_nombre_y_apellido_de_30(self):
+        nombre, apellido = 'N' * NOMBRE_MAX, 'A' * NOMBRE_MAX
         respuesta = self.client.post(reverse('usuarios:registro'), datos_registro(
             nombre=nombre, apellido=apellido, correo='largo@example.com',
         ))
@@ -263,11 +271,8 @@ class LongitudNombresTests(TestCase):
         self.assertEqual(usuario.nombre, nombre)
         self.assertEqual(usuario.apellido, apellido)
 
-    def test_registro_rechaza_nombre_de_31_y_apellido_de_41(self):
-        casos = (
-            ('nombre', NOMBRE_MAX + 1),
-            ('apellido', LONGITUD_MAXIMA_NOMBRE + 1),
-        )
+    def test_registro_rechaza_nombre_y_apellido_de_31(self):
+        casos = (('nombre', NOMBRE_MAX + 1), ('apellido', NOMBRE_MAX + 1))
         for campo, longitud in casos:
             with self.subTest(campo=campo):
                 datos = datos_registro(correo=f'{campo}_largo@example.com')
@@ -278,7 +283,7 @@ class LongitudNombresTests(TestCase):
 
     def test_formularios_de_perfil_y_admin_usan_los_mismos_limites(self):
         instancia = Usuario(correo='ejemplo@example.com', nombre='Ejemplo')
-        limites = {'nombre': str(NOMBRE_MAX), 'apellido': str(LONGITUD_MAXIMA_NOMBRE)}
+        limites = {'nombre': str(NOMBRE_MAX), 'apellido': str(NOMBRE_MAX)}
         for clase in (PerfilForm, UsuarioAdminForm):
             with self.subTest(formulario=clase.__name__):
                 formulario = clase(instance=instancia)
@@ -334,7 +339,7 @@ class NormaNombresTests(TestCase):
         usuario = Usuario.objects.create_user('ana@example.com', CLAVE, nombre='Ana')
         self.client.force_login(usuario)
         respuesta = self.client.post(reverse('usuarios:perfil'), {
-            'nombre': 'Ana@', 'apellido': 'Pérez', 'telefono': '300',
+            'nombre': 'Ana@', 'apellido': 'Pérez', 'telefono': '3001234567',
         })
         self.assertEqual(respuesta.status_code, 200)
         usuario.refresh_from_db()
@@ -352,3 +357,134 @@ class NormaNombresTests(TestCase):
         with self.assertRaises(ValidationError) as error:
             Usuario.objects.create_user('ana@example.com', CLAVE, nombre='Ana@')
         self.assertIn('nombre', error.exception.message_dict)
+
+
+class ApellidoTelefonoTests(TestCase):
+    """El apellido usa la misma regla del nombre; el teléfono es digits-only."""
+
+    def test_apellido_acepta_tildes_enie_y_espacios(self):
+        for apellido in ('Pérez', 'Muñoz', 'García Gómez'):
+            with self.subTest(apellido=apellido):
+                formulario = RegistroForm(data=datos_registro(apellido=apellido))
+                self.assertTrue(formulario.is_valid(), formulario.errors)
+
+    def test_apellido_rechaza_numeros_signos_vacio_y_largo(self):
+        casos = ('Pérez2', '*+?-}{1234', "O'Brien", '', 'A' * (NOMBRE_MAX + 1))
+        for apellido in casos:
+            with self.subTest(apellido=apellido):
+                formulario = RegistroForm(data=datos_registro(apellido=apellido))
+                self.assertFalse(formulario.is_valid())
+                self.assertIn('apellido', formulario.errors)
+
+    def test_mensaje_de_apellido_habla_del_campo_correcto(self):
+        formulario = RegistroForm(data=datos_registro(apellido='Pérez2'))
+        self.assertIn('El apellido solo puede contener letras', str(formulario.errors))
+
+    def test_telefono_valido_y_normalizado(self):
+        formulario = RegistroForm(data=datos_registro(telefono=' 300 123 4567 '))
+        self.assertTrue(formulario.is_valid(), formulario.errors)
+        usuario = formulario.save()
+        self.assertEqual(usuario.telefono, '300 123 4567')
+
+    def test_telefono_rechaza_letras_corto_y_fijo_colombiano_de_10(self):
+        casos = ('hola soyun numero', '300', '6011234567', '3001234567890123456')
+        for telefono in casos:
+            with self.subTest(telefono=telefono):
+                formulario = RegistroForm(data=datos_registro(telefono=telefono))
+                self.assertFalse(formulario.is_valid())
+                self.assertIn('telefono', formulario.errors)
+
+    def test_modelo_normaliza_al_guardar(self):
+        usuario = Usuario.objects.create_user(
+            'limpio@example.com', CLAVE, nombre='  Ana   María ',
+            apellido='  Pérez  ', telefono='  3001234567  ',
+        )
+        usuario.refresh_from_db()
+        self.assertEqual(usuario.nombre, 'Ana María')
+        self.assertEqual(usuario.apellido, 'Pérez')
+        self.assertEqual(usuario.telefono, '3001234567')
+        self.assertEqual(usuario.nombre_completo, 'Ana María Pérez')
+
+
+class RecuperacionClaveTests(TestCase):
+    """Flujo completo de recuperación con mensaje genérico y token de una hora."""
+
+    def setUp(self):
+        self.usuario = Usuario.objects.create_user(
+            'ana@example.com', CLAVE, nombre='Ana', apellido='Pérez',
+        )
+
+    def test_pedir_enlace_no_revela_si_el_correo_existe(self):
+        for correo in ('ana@example.com', 'desconocido@example.com'):
+            with self.subTest(correo=correo):
+                respuesta = self.client.post(
+                    reverse('usuarios:recuperar'), {'email': correo}
+                )
+                self.assertRedirects(respuesta, reverse('usuarios:recuperar_enviado'))
+                self.assertContains(
+                    self.client.get(reverse('usuarios:recuperar_enviado')),
+                    'Si la cuenta existe',
+                )
+
+    def test_enlace_cambia_la_contraseña(self):
+        self.client.post(reverse('usuarios:recuperar'), {'email': self.usuario.correo})
+        self.assertEqual(len(mail.outbox), 1)
+        enlace = re.search(r'/usuarios/recuperar/[^\s]+/', mail.outbox[0].body).group(0)
+        # Django redirige a .../set-password/ para no filtrar el token en el
+        # referer; seguimos esa redirección antes de enviar la nueva clave.
+        respuesta = self.client.get(enlace, follow=True)
+        self.assertEqual(respuesta.status_code, 200)
+        url_final = respuesta.redirect_chain[-1][0] if respuesta.redirect_chain else enlace
+        respuesta = self.client.post(url_final, {
+            'new_password1': 'Otra-Clave-Segura-2026',
+            'new_password2': 'Otra-Clave-Segura-2026',
+        })
+        self.assertRedirects(respuesta, reverse('usuarios:recuperar_listo'))
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password('Otra-Clave-Segura-2026'))
+
+    def test_cambio_de_contraseña_requiere_login(self):
+        url = reverse('usuarios:cambiar_clave')
+        self.assertRedirects(
+            self.client.get(url), f"{reverse('usuarios:entrar')}?next={url}"
+        )
+        self.client.force_login(self.usuario)
+        respuesta = self.client.post(url, {
+            'old_password': CLAVE,
+            'new_password1': 'Otra-Clave-Segura-2026',
+            'new_password2': 'Otra-Clave-Segura-2026',
+        })
+        self.assertRedirects(respuesta, reverse('usuarios:cambiar_clave_listo'))
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password('Otra-Clave-Segura-2026'))
+
+
+class BloqueoLoginTests(TestCase):
+    """Cinco intentos fallidos bloquean temporalmente el formulario."""
+
+    def setUp(self):
+        cache.clear()
+        self.usuario = Usuario.objects.create_user(
+            'ana@example.com', CLAVE, nombre='Ana', apellido='Pérez',
+        )
+        self.url = reverse('usuarios:entrar')
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_seisimo_intento_es_redirigido_y_no_entra(self):
+        datos = {'username': 'ana@example.com', 'password': 'mal'}
+        for _ in range(5):
+            self.assertEqual(self.client.post(self.url, datos).status_code, 200)
+        respuesta = self.client.post(self.url, {**datos, 'password': CLAVE})
+        self.assertRedirects(respuesta, self.url)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_usuario_inactivo_no_revela_su_estado(self):
+        self.usuario.is_active = False
+        self.usuario.save()
+        respuesta = self.client.post(self.url, {
+            'username': self.usuario.correo, 'password': CLAVE,
+        })
+        self.assertContains(respuesta, 'Correo o contraseña incorrectos.')
+        self.assertNotContains(respuesta, 'desactivada')

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Demasiada información | LookBy{% endblock %}
+{% block content %}
+<div class="contenido error-page">
+  <h2>Enviaste más información de la permitida</h2>
+  <p>El formulario recibió un texto demasiado largo. Acorta la descripción o el comentario (máximo 500 caracteres) y vuelve a enviarlo.</p>
+  <p><a class="btn-start" href="javascript:history.back()">Volver al formulario</a></p>
+  <p><a href="{% url 'inicio:home' %}">Ir al inicio</a></p>
+</div>
+{% endblock %}

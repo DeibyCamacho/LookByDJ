@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Página no encontrada | LookBy{% endblock %}
+{% block content %}
+<div class="contenido error-page">
+  <h2>Esta página no existe</h2>
+  <p>Puede que el enlace haya cambiado o que la información ya no esté disponible.</p>
+  <p><a class="btn-start" href="{% url 'inicio:home' %}">Volver al inicio</a></p>
+</div>
+{% endblock %}

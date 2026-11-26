@@ -17,6 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+# Páginas de error con el diseño de la app. Nunca muestran trazas ni rutas.
+handler400 = 'lookby_proyecto.vistas_error.error_400'
+handler403 = 'lookby_proyecto.vistas_error.error_403'
+handler404 = 'lookby_proyecto.vistas_error.error_404'
+handler413 = 'lookby_proyecto.vistas_error.error_413'
+handler500 = 'lookby_proyecto.vistas_error.error_500'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('usuarios/', include('usuarios.urls')),

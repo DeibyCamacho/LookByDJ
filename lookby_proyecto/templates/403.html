@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Sin permiso | LookBy{% endblock %}
+{% block content %}
+<div class="contenido error-page">
+  <h2>No tienes permiso para hacer esto</h2>
+  <p>Esa información pertenece a otra persona o a otro local. Si crees que es un error, contacta al administrador.</p>
+  <p><a class="btn-start" href="{% url 'inicio:home' %}">Volver al inicio</a></p>
+</div>
+{% endblock %}

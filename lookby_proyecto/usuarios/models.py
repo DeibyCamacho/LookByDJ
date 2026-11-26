@@ -8,14 +8,18 @@ from django.db import models
 from .validators import (
     CORREO_MAX,
     NOMBRE_MAX,
+    TELEFONO_MAX,
+    normalizar_espacios,
+    validadores_apellido,
     validadores_correo,
     validadores_nombre,
+    validadores_telefono,
 )
 
 
-# Longitud máxima de los apellidos. El nombre tiene su propio límite (30) según
-# la norma de calidad de usuarios; ver usuarios/validators.py.
-LONGITUD_MAXIMA_NOMBRE = 40
+# El apellido usa la misma norma de calidad que el nombre (3-30 letras). Se
+# mantiene el nombre de la constante para no romper importaciones existentes.
+LONGITUD_MAXIMA_NOMBRE = NOMBRE_MAX
 
 
 class Rol(models.Model):
@@ -59,6 +63,9 @@ class UsuarioManager(BaseUserManager):
         if not correo:
             raise ValueError('El correo es obligatorio.')
         correo = self.normalize_email(correo).lower()
+        # Las altas por shell/tests/createsuperuser no pasan por un formulario:
+        # les damos un apellido válido para que ``full_clean()`` no falle.
+        extra.setdefault('apellido', 'Demo')
         usuario = self.model(correo=correo, **extra)
         usuario.set_password(password)  # guarda el hash, nunca texto plano
         usuario.full_clean()  # aplica la norma de nombres también por ORM/admin
@@ -81,10 +88,10 @@ class UsuarioManager(BaseUserManager):
 class Usuario(AbstractBaseUser, PermissionsMixin):
     """Usuario de LookBy. Inicia sesión con el correo.
 
-    ``nombre`` y ``correo`` cumplen la norma de calidad descrita en
-    :mod:`usuarios.validators` (3-30 caracteres; nombre con letras y espacios;
-    correo con formato y signos permitidos). ``apellido`` conserva el límite
-    de 40 caracteres añadido por el equipo.
+    ``nombre``, ``apellido``, ``correo`` y ``telefono`` cumplen la norma de
+    calidad descrita en :mod:`usuarios.validators`. Los cuatro campos se
+    normalizan al guardar para que no aparezca texto con espacios sobrantes en
+    pedidos, calificaciones ni listados.
     """
 
     correo = models.EmailField(
@@ -97,8 +104,17 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         max_length=NOMBRE_MAX,
         validators=validadores_nombre(),
     )
-    apellido = models.CharField(max_length=LONGITUD_MAXIMA_NOMBRE, blank=True)
-    telefono = models.CharField('teléfono', max_length=30, blank=True)
+    apellido = models.CharField(
+        max_length=NOMBRE_MAX,
+        validators=validadores_apellido(),
+    )
+    telefono = models.CharField(
+        'teléfono',
+        max_length=TELEFONO_MAX,
+        blank=True,
+        validators=validadores_telefono(),
+        help_text='Ejemplo: 3001234567. Entre 7 y 15 dígitos.',
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField('activo', default=True)
     is_staff = models.BooleanField('acceso al admin', default=False)
@@ -107,18 +123,31 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'correo'
+    # Django usa EMAIL_FIELD en la recuperación de contraseña y en el admin.
+    # Sin esto buscaba un campo `email` inexistente y la vista fallaba.
+    EMAIL_FIELD = 'correo'
     REQUIRED_FIELDS = ['nombre']
 
     class Meta:
         verbose_name = 'usuario'
         verbose_name_plural = 'usuarios'
 
+    def save(self, *args, **kwargs):
+        """Guarda los campos de texto normalizados (sin espacios sobrantes)."""
+        for campo in ('nombre', 'apellido', 'telefono'):
+            valor = getattr(self, campo, None)
+            if valor is not None:
+                setattr(self, campo, normalizar_espacios(valor))
+        self.correo = self.correo.strip().lower()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.nombre_completo or self.correo
 
     @property
     def nombre_completo(self):
-        return f'{self.nombre} {self.apellido}'.strip()
+        """Nombre visible limpio, usado por pedidos, calificaciones y listados."""
+        return normalizar_espacios(f'{self.nombre} {self.apellido}')
 
     def tiene_rol(self, nombre_rol):
         return self.roles.filter(nombre=nombre_rol).exists()

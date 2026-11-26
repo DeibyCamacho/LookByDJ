@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Error del servidor | LookBy{% endblock %}
+{% block content %}
+<div class="contenido error-page">
+  <h2>Algo salió mal</h2>
+  <p>No pudimos completar tu solicitud. El equipo ya fue avisado. Inténtalo de nuevo en unos minutos.</p>
+  <p><a class="btn-start" href="{% url 'inicio:home' %}">Volver al inicio</a></p>
+</div>
+{% endblock %}

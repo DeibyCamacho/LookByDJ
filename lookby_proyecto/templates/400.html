@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Petición no válida | LookBy{% endblock %}
+{% block content %}
+<div class="contenido error-page">
+  <h2>No pudimos entender tu petición</h2>
+  <p>Revisa los datos e inténtalo otra vez. Si sigues viendo este aviso, vuelve al inicio.</p>
+  <p><a class="btn-start" href="{% url 'inicio:home' %}">Volver al inicio</a></p>
+</div>
+{% endblock %}

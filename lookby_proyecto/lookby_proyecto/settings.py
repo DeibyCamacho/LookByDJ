@@ -49,9 +49,43 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
+if not DEBUG and len(SECRET_KEY) < 50:
+    # En producción no se acepta la clave de ejemplo: fallar temprano es
+    # mejor que publicar una app con una clave predecible.
+    raise ValueError(
+        'Define DJANGO_SECRET_KEY con al menos 50 caracteres aleatorios antes '
+        'de desplegar LookBy con DJANGO_DEBUG=0.'
+    )
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 if not DEBUG:
-    ALLOWED_HOSTS += [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
+    ALLOWED_HOSTS = [
+        h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost').split(',') if h
+    ]
+
+# --- Cabeceras y cookies seguras (solo se endurecen en producción) -------------
+SECURE_SSL_REDIRECT = not DEBUG and os.environ.get('SECURE_SSL_REDIRECT', '1') == '1'
+SECURE_HSTS_SECONDS = 0 if DEBUG else int(os.environ.get('SECURE_HSTS_SECONDS', '3600'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(SECURE_HSTS_SECONDS)
+SECURE_HSTS_PRELOAD = bool(SECURE_HSTS_SECONDS)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+# Necesario para que OpenStreetMap acepte los tiles (strict-origin cuando hay
+# redirect de HTTPS a HTTP en el referer). Ver mapas/templates/mapas/lista.html.
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# --- Límites explícitos de tamaño de las peticiones ---------------------------
+# Un POST desproporcionado debe dar 413 y nuestra página 413.html, nunca una
+# traceback. 2 MB es suficiente para los formularios de texto de LookBy.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+
+# El token de recuperación de contraseña caduca en una hora.
+PASSWORD_RESET_TIMEOUT = 60 * 60
 
 
 # Application definition
@@ -86,6 +120,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'lookby_proyecto.middleware.ManejoPeticionesGrandesMiddleware',
 ]
 
 # Modelo de usuario propio (debe definirse antes de la primera migración)
@@ -171,9 +206,58 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+# En desarrollo se imprime el correo en la consola (se puede probar el flujo de
+# recuperación sin servidor SMTP). En producción se exige SMTP por variables
+# de entorno, con lo que `check --deploy` queda sin el error mail.E001.
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL', 'LookBy <no-reply@lookby.local>'
+)
+
+if DEBUG:
+    # Django 6.1 usa MAILERS (EMAIL_BACKEND está deprecado y no se puede
+    # definir al mismo tiempo; `check` lo detecta como error de configuración).
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'HOST': os.environ.get('EMAIL_HOST', 'localhost'),
+            'PORT': int(os.environ.get('EMAIL_PORT', '587')),
+            'USERNAME': os.environ.get('EMAIL_HOST_USER', ''),
+            'PASSWORD': os.environ.get('EMAIL_HOST_PASSWORD', ''),
+            'USE_TLS': os.environ.get('EMAIL_USE_TLS', '1') == '1',
+            'DEFAULT_FROM_EMAIL': DEFAULT_FROM_EMAIL,
+        },
+    }
+
+# --- Registro de errores -------------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '%(asctime)s %(levelname)s %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'lookby': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }

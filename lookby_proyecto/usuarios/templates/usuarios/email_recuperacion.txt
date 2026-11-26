@@ -1,0 +1,10 @@
+Hola {{ user.nombre }}:
+
+Recibimos una solicitud para restablecer la contraseña de tu cuenta LookBy.
+
+Abre este enlace para crear una nueva contraseña (caduca en una hora):
+{{ protocol }}://{{ domain }}{% url 'usuarios:recuperar_confirmar' uidb64=uid token=token %}
+
+Si no fuiste tú, ignora este correo: tu contraseña no cambiará.
+
+Equipo LookBy

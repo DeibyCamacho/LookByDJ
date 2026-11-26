@@ -1,10 +1,21 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import (
+    LoginView,
+    PasswordChangeDoneView,
+    PasswordChangeView,
+    PasswordResetCompleteView,
+    PasswordResetConfirmView,
+    PasswordResetDoneView,
+    PasswordResetView,
+)
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
 
 from .forms import (
     LoginForm,
@@ -33,9 +44,90 @@ def registro(request):
 
 
 class EntrarView(LoginView):
+    """Login con límite de intentos por IP+correo y mensaje genérico."""
+
     template_name = 'usuarios/entrar.html'
     authentication_form = LoginForm
     redirect_authenticated_user = True
+    MAX_INTENTOS = 5
+    VENTANA_SEGUNDOS = 5 * 60
+
+    def _clave_intentos(self, request):
+        """Clave de caché que separa intentos por origen y correo."""
+        correo = (request.POST.get('username') or '').strip().lower()
+        ip = request.META.get('REMOTE_ADDR', 'desconocida')
+        return f'lookby:login:{ip}:{correo}'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Bloquea temporalmente tras cinco intentos fallidos."""
+        if request.method == 'POST':
+            clave = self._clave_intentos(request)
+            if cache.get(clave, 0) >= self.MAX_INTENTOS:
+                messages.error(
+                    request,
+                    'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.',
+                )
+                return redirect('usuarios:entrar')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        """Cuenta el fallo sin revelar si el correo existe."""
+        clave = self._clave_intentos(self.request)
+        cache.set(
+            clave,
+            cache.get(clave, 0) + 1,
+            self.VENTANA_SEGUNDOS,
+        )
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        """Limpia el contador y muestra un mensaje de bienvenida."""
+        cache.delete(self._clave_intentos(self.request))
+        messages.success(self.request, '¡Bienvenido de nuevo a LookBy!')
+        return super().form_valid(form)
+
+
+# --- Recuperación y cambio de contraseña (vistas nativas de Django) ------------
+
+class RecuperarClaveView(PasswordResetView):
+    """Envía el correo con el token de recuperación."""
+
+    template_name = 'usuarios/password_reset_form.html'
+    email_template_name = 'usuarios/email_recuperacion.txt'
+    subject_template_name = 'usuarios/email_recuperacion_asunto.txt'
+    success_url = reverse_lazy('usuarios:recuperar_enviado')
+
+
+class RecuperarEnviadoView(PasswordResetDoneView):
+    """Mensaje genérico: no dice si el correo estaba registrado."""
+
+    template_name = 'usuarios/password_reset_done.html'
+
+
+class RecuperarConfirmarView(PasswordResetConfirmView):
+    """Formulario de nueva contraseña; el token caduca en una hora."""
+
+    template_name = 'usuarios/password_reset_confirm.html'
+    success_url = reverse_lazy('usuarios:recuperar_listo')
+
+
+class RecuperarListoView(PasswordResetCompleteView):
+    """Confirmación de contraseña cambiada."""
+
+    template_name = 'usuarios/password_reset_complete.html'
+
+
+class CambiarClaveView(LoginRequiredMixin, PasswordChangeView):
+    """Cambio de contraseña estando logueado."""
+
+    template_name = 'usuarios/password_change_form.html'
+    success_url = reverse_lazy('usuarios:cambiar_clave_listo')
+
+
+class CambiarClaveListoView(LoginRequiredMixin, PasswordChangeDoneView):
+    """Confirmación del cambio de contraseña."""
+
+    template_name = 'usuarios/password_change_done.html'
 
 
 @login_required

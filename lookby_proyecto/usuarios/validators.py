@@ -1,112 +1,153 @@
-r"""Validadores de la norma de calidad de nombres y correos de LookBy.
+r"""Validadores reutilizables de LookBy (una sola definición, todo el proyecto).
 
 Historia
 --------
-Requerimiento integrado el 25/11/2026 a petición del liderazgo del proyecto:
-"los nombres de usuario no deben llevar caracteres especiales, con la longitud
-preestablecida por calidad".
+El 25/11/2026 se integró la norma de calidad del nombre y el correo del usuario.
+El 26/11/2026, tras la prueba funcional, se amplió el módulo para cubrir también
+apellido, teléfono, dirección, precios, cantidades y textos largos. Así evitamos
+que cada app repita expresiones regulares con mensajes distintos.
 
-Regla oficial
--------------
-=================  ==========================================================
-Campo              Regla
-=================  ==========================================================
-``nombre``         De 3 a 30 caracteres. Solamente letras y espacios. Sin
-                   números, guiones, puntos, arrobas, guiones bajos ni otros
-                   signos. No se permiten espacios al inicio ni al final
-                   (los formularios hacen ``strip`` antes de validar).
-``correo``         De 3 a 30 caracteres. Formato de correo con una sola ``@``
-                   y dominio con punto. Se admiten letras, números, ``.``,
-                   ``-``, ``_`` y ``+`` como parte del correo; se rechazan
-                   otros signos como ``#``, ``$``, ``!`` o comillas.
-=================  ==========================================================
+Reglas
+------
+===================  =========================================================
+Campo                Regla
+===================  =========================================================
+nombre/apellido      3 a 30 caracteres; solo letras (tildes y ñ incluidas) y
+                     espacios entre palabras; sin números ni signos.
+correo               3 a 30 caracteres; formato válido; solo letras, números,
+                     ``@``, punto, guión, guion bajo y ``+``.
+teléfono             7 a 15 dígitos; se admite un ``+`` inicial y espacios;
+                     si tiene 10 dígitos debe ser un celular CO que empieza por 3.
+dirección            10 a 150 caracteres; debe tener letras y al menos un número;
+                     se permiten ``#``, ``-``, ``.``, ``,`` y ``°``.
+precio               Decimal mayor o igual a 0, máximo 2 decimales y tope.
+cantidad             Entero entre 1 y ``CANTIDAD_MAX``.
+===================  =========================================================
 
 Notas de diseño
 ---------------
-* Las tildes y la ``ñ`` se consideran **letras**, no caracteres especiales.
-  Por eso ``José`` y ``Dueño`` son válidos y no se rompen los datos demo ni
-  las pruebas existentes.
+* Las clases llevan ``@deconstructible`` y ``__eq__`` para que Django pueda
+  serializarlas en las migraciones sin generar cambios espuros.
 * ``[^\W\d_]`` es la forma Unicode de decir "letra": ``\w`` incluye letras,
   números y guion bajo, así que se excluyen explícitamente los dos últimos.
-* Los validadores están decorados con :func:`~django.utils.deconstruct.
-  deconstructible` para que Django pueda serializarlos en la migración
-  ``0004_alter_usuario_correo_alter_usuario_nombre.py``.
-* Django ejecuta estos validadores al validar formularios (registro, perfil y
-  administración) y al llamar a ``Usuario.full_clean()``. Una escritura
-  directa por ``QuerySet.update()`` o SQL crudo no pasa por ellos, igual que
-  ocurre con cualquier validador de Django.
+* Un validador es la defensa del servidor; ``maxlength``/``pattern`` en HTML son
+  solo ayuda de usabilidad. Los formularios además hacen ``strip`` antes de
+  validar y guardan el valor normalizado (ver :func:`normalizar_espacios`).
 """
 
 import re
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MinLengthValidator
+from django.core.validators import (
+    DecimalValidator,
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
+)
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy as _
 
-#: Longitud mínima aceptada para ``nombre`` y ``correo``.
+#: Longitud mínima de un nombre o apellido de persona.
 NOMBRE_MIN = 3
-#: Longitud máxima aceptada para ``nombre`` (también es el ``max_length`` del campo).
+#: Longitud máxima de un nombre o apellido de persona.
 NOMBRE_MAX = 30
-#: Longitud mínima aceptada para ``correo``.
+#: Longitud mínima del correo.
 CORREO_MIN = 3
-#: Longitud máxima aceptada para ``correo`` (también es el ``max_length`` del campo).
+#: Longitud máxima del correo.
 CORREO_MAX = 30
+#: Longitud máxima del teléfono guardado en la base.
+TELEFONO_MAX = 20
+#: Dígitos mínimos y máximos del teléfono (sin contar el ``+`` ni los espacios).
+TELEFONO_DIGITOS_MIN = 7
+TELEFONO_DIGITOS_MAX = 15
+#: Longitud de la dirección de entrega.
+DIRECCION_MIN = 10
+DIRECCION_MAX = 150
+#: Tope de precio y de cantidad.
+PRECIO_MAX = Decimal('999999999.99')
+CANTIDAD_MAX = 1000
+#: Límites de los textos libres que antes no tenían tope.
+DESCRIPCION_MAX = 500
+BIOGRAFIA_MAX = 500
+COMENTARIO_MAX = 300
 
-# Una o más letras, separadas por grupos de espacios. Las tildes y la ñ entran
-# en [^\W\d_] porque son letras Unicode.
 _SOLO_LETRAS_Y_ESPACIOS = re.compile(r'^[^\W\d_]+(?: +[^\W\d_]+)*$')
-
-# Los únicos signos permitidos son los que forman parte de un correo habitual.
-# El dominio debe terminar en un TLD alfabético (com, co, org, edu, ...).
 _CORREO_PERMITIDO = re.compile(
     r'^[A-Za-z0-9][A-Za-z0-9._+-]*@'
     r'[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?'
     r'(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$'
 )
+_TELEFONO = re.compile(r'^\+?[0-9]+(?: [0-9]+)*$')
+_DIRECCION = re.compile(r'^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9#°.,/\-\s]+$')
+
+
+def normalizar_espacios(valor):
+    """Recorta espacios extremos y colapsa los internos repetidos.
+
+    Se usa en los formularios antes de validar y al guardar, para que un valor
+    como ``'  Ana   María '`` se almacene como ``'Ana María'`` y no se vea con
+    basura en pedidos, calificaciones ni listados.
+    """
+    if valor is None:
+        return valor
+    return re.sub(r'\s+', ' ', str(valor)).strip()
 
 
 @deconstructible
-class ValidarSoloLetrasYEspacios:
-    """Rechaza números, signos y espacios sobrantes en el nombre de usuario.
+class ValidarNombrePersona:
+    """Valida un nombre de persona con el mensaje adecuado al campo.
 
-    Se usa como validador del campo ``Usuario.nombre``. Recibe el valor ya
-    limpio por el formulario (sin espacios al inicio ni al final), pero también
-    hace ``strip()`` para funcionar correctamente si se llama desde ``full_clean()``.
-
-    Raises:
-        ValidationError: si el valor está vacío, contiene algo que no sea letra
-            o espacio, o deja espacios entre palabras mal formados.
+    Args:
+        campo: nombre del campo en los mensajes ('nombre' o 'apellido').
     """
 
-    message = _(
-        'El nombre solo puede contener letras y espacios. '
-        'No se permiten números ni caracteres especiales.'
-    )
-    code = 'nombre_no_valido'
+    def __init__(self, campo='nombre'):
+        self.campo = campo
+
+    @property
+    def message(self):
+        """Mensaje en español, claro y accionable."""
+        return _(
+            f'El {self.campo} solo puede contener letras y espacios. '
+            'No se permiten números ni caracteres especiales.'
+        )
+
+    code = 'nombre_persona_no_valido'
 
     def __call__(self, value):
-        """Valida ``value``; los valores vacíos los gestiona Django por separado."""
-        if value and not _SOLO_LETRAS_Y_ESPACIOS.match(str(value).strip()):
+        """Rechaza vacíos, números, signos y espacios mal puestos."""
+        valor = normalizar_espacios(value)
+        if not valor:
+            raise ValidationError(
+                _(f'El {self.campo} es obligatorio.'), code='campo_obligatorio'
+            )
+        if not _SOLO_LETRAS_Y_ESPACIOS.match(valor):
             raise ValidationError(self.message, code=self.code)
 
     def __eq__(self, other):
-        """Necesario para que Django compare bien los validadores en migraciones."""
-        return isinstance(other, self.__class__)
+        """Comparación estable para las migraciones."""
+        return (
+            isinstance(other, ValidarNombrePersona)
+            and self.campo == other.campo
+        )
+
+
+@deconstructible
+class ValidarSoloLetrasYEspacios(ValidarNombrePersona):
+    """Compatibilidad con la migración ``0004`` (nombre de usuario)."""
+
+    def __init__(self):
+        super().__init__('nombre')
+
+    def __eq__(self, other):
+        return isinstance(other, ValidarSoloLetrasYEspacios)
 
 
 @deconstructible
 class ValidarCorreoPermitido:
-    """Exige un correo bien formado y sin signos ajenos al formato de correo.
-
-    Django ya valida el formato básico con ``EmailValidator``; este validador
-    añade la restricción extra de la norma de calidad (solo ``@``, punto,
-    guión, guion bajo y más como signos permitidos).
-
-    Raises:
-        ValidationError: si el correo tiene signos no permitidos o no tiene
-            dominio con punto.
-    """
+    """Exige un correo bien formado y sin signos ajenos al formato de correo."""
 
     message = _(
         'El correo debe ser válido y usar solamente letras, números, punto, '
@@ -116,32 +157,116 @@ class ValidarCorreoPermitido:
 
     def __call__(self, value):
         """Valida ``value`` contra el patrón de correo permitido."""
-        if value and not _CORREO_PERMITIDO.match(str(value).strip()):
+        if value and not _CORREO_PERMITIDO.match(str(value).strip().lower()):
             raise ValidationError(self.message, code=self.code)
 
     def __eq__(self, other):
-        """Necesario para que Django compare bien los validadores en migraciones."""
         return isinstance(other, self.__class__)
 
 
+@deconstructible
+class ValidarTelefono:
+    """Teléfono con 7 a 15 dígitos; ``+`` inicial y espacios permitidos."""
+
+    message = _(
+        'Escribe un teléfono válido: entre 7 y 15 dígitos. '
+        'Puedes empezar con + y separar con espacios. Ejemplo: 300 123 4567.'
+    )
+    code = 'telefono_no_valido'
+
+    def __call__(self, value):
+        """Rechaza letras y signos, y comprueba la longitud real de dígitos."""
+        if not value:
+            return
+        valor = normalizar_espacios(value)
+        if not _TELEFONO.match(valor):
+            raise ValidationError(self.message, code=self.code)
+        digitos = valor.lstrip('+').replace(' ', '')
+        if not TELEFONO_DIGITOS_MIN <= len(digitos) <= TELEFONO_DIGITOS_MAX:
+            raise ValidationError(self.message, code=self.code)
+        if len(digitos) == 10 and not digitos.startswith('3'):
+            raise ValidationError(
+                _('Un celular colombiano de 10 dígitos debe empezar por 3. '
+                  'Ejemplo: 3001234567.'),
+                code='celular_colombiano_no_valido',
+            )
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__)
+
+
+@deconstructible
+class ValidarDireccion:
+    """Dirección con letras, un número y caracteres usuales de Colombia."""
+
+    message = _(
+        'Escribe una dirección válida con letras y número. '
+        'Ejemplo: Calle 50 # 43-20, Medellín.'
+    )
+    code = 'direccion_no_valida'
+
+    def __call__(self, value):
+        """Rechaza texto sin sentido como 'mhv mvjhgm'."""
+        if not value:
+            return
+        valor = normalizar_espacios(value)
+        if not DIRECCION_MIN <= len(valor) <= DIRECCION_MAX:
+            raise ValidationError(self.message, code=self.code)
+        if not _DIRECCION.match(valor):
+            raise ValidationError(self.message, code=self.code)
+        if not re.search(r'[^\W\d_]', valor) or not re.search(r'\d', valor):
+            raise ValidationError(self.message, code=self.code)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__)
+
+
+def validadores_persona(campo):
+    """Devuelve los validadores compartidos para nombre y apellido."""
+    # La longitud máxima la añade Django desde ``max_length`` del modelo/form;
+    # repetirla aquí mostraría dos errores distintos para el mismo problema.
+    return [MinLengthValidator(NOMBRE_MIN), ValidarNombrePersona(campo)]
+
+
 def validadores_nombre():
-    """Devuelve los validadores del campo ``nombre``.
+    """Validadores del campo ``nombre`` de ``Usuario``."""
+    return validadores_persona('nombre')
 
-    La longitud máxima no se incluye aquí porque Django la añade solo con
-    ``max_length`` del modelo; así se evita duplicar el error en los formularios.
 
-    Returns:
-        list: ``MinLengthValidator(3)`` y ``ValidarSoloLetrasYEspacios``.
-    """
-    return [MinLengthValidator(NOMBRE_MIN), ValidarSoloLetrasYEspacios()]
+def validadores_apellido():
+    """Validadores del campo ``apellido`` de ``Usuario``."""
+    return validadores_persona('apellido')
 
 
 def validadores_correo():
-    """Devuelve los validadores del campo ``correo``.
-
-    Returns:
-        list: ``MinLengthValidator(3)`` y ``ValidarCorreoPermitido``.
-        Django añade por su cuenta el validador de longitud máxima (30) y el
-        validador de formato de correo.
-    """
+    """Validadores del campo ``correo`` de ``Usuario``."""
     return [MinLengthValidator(CORREO_MIN), ValidarCorreoPermitido()]
+
+
+def validadores_telefono():
+    """Validador de teléfono reutilizable en todos los formularios."""
+    return [ValidarTelefono()]
+
+
+def validadores_direccion():
+    """Validador de dirección reutilizable en pedidos y locales."""
+    return [ValidarDireccion()]
+
+
+def validadores_precio():
+    """Precio decimal no negativo, con dos decimales y un tope razonable."""
+    return [
+        DecimalValidator(10, 2),
+        MinValueValidator(Decimal('0')),
+        MaxValueValidator(PRECIO_MAX),
+    ]
+
+
+def validadores_cantidad(maximo=CANTIDAD_MAX):
+    """Cantidad entera entre 1 y ``maximo``."""
+    return [MinValueValidator(1), MaxValueValidator(maximo)]
+
+
+def validador_texto_largo(maximo):
+    """Validador de longitud para ``TextField`` que antes no tenían límite."""
+    return MaxLengthValidator(maximo)
