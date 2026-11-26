@@ -1,8 +1,9 @@
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 from usuarios.models import Usuario
 
+from .forms import LocalForm
 from .models import Local
 
 CLAVE = 'Clave-Segura-2026'
@@ -53,6 +54,46 @@ class CrearLocalTests(LocalesBase):
         r = self.client.post(reverse('locales:crear'), datos_local(nombre='X', latitud='95'))
         self.assertEqual(r.status_code, 200)
         self.assertFalse(Local.objects.filter(nombre='X').exists())
+
+    def test_telefono_con_letras_rechazado(self):
+        self.client.force_login(self.otro)
+        r = self.client.post(
+            reverse('locales:crear'),
+            datos_local(nombre='Teléfono malo', telefono='300abc4567'),
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(Local.objects.filter(nombre='Teléfono malo').exists())
+        self.assertContains(r, 'Escribe un teléfono válido')
+
+    def test_longitudes_maximas_rechazadas(self):
+        casos = {
+            'nombre': 'N' * 81,
+            'direccion': 'Calle 1 # 2-3 ' + ('x' * 140),
+            'ciudad': 'C' * 101,
+            'telefono': '3' * 21,
+            'descripcion': 'D' * 501,
+        }
+        for campo, valor in casos.items():
+            with self.subTest(campo=campo):
+                form = LocalForm(data=datos_local(**{campo: valor}))
+                self.assertFalse(form.is_valid())
+                self.assertIn(campo, form.errors)
+                self.assertIn('no puede superar', str(form.errors[campo]))
+
+    def test_form_normaliza_espacios(self):
+        form = LocalForm(data=datos_local(
+            nombre='  Salón   Luna  ',
+            direccion='  Calle   1 # 2-3 ',
+            ciudad='  Bogotá  ',
+            telefono='  300 123 4567  ',
+            descripcion='  Belleza   natural  ',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['nombre'], 'Salón Luna')
+        self.assertEqual(form.cleaned_data['direccion'], 'Calle 1 # 2-3')
+        self.assertEqual(form.cleaned_data['ciudad'], 'Bogotá')
+        self.assertEqual(form.cleaned_data['telefono'], '300 123 4567')
+        self.assertEqual(form.cleaned_data['descripcion'], 'Belleza natural')
 
 
 class PermisosLocalTests(LocalesBase):
@@ -131,11 +172,12 @@ class ListadoYDesactivarTests(LocalesBase):
         self.assertContains(r, 'Salón Luna')
         self.assertNotContains(r, 'Peluquería Nueva')
 
-    def test_alias_eliminar_apunta_a_la_misma_baja(self):
-        self.assertEqual(
-            reverse('locales:eliminar', args=[self.local.pk]),
-            reverse('locales:desactivar', args=[self.local.pk]),
-        )
+    def test_desactivar_es_la_unica_ruta_de_baja(self):
+        url = reverse('locales:desactivar', args=[self.local.pk])
+        self.assertTrue(url.endswith('/eliminar/'))
+        # Se quitó el alias duplicado: solo queda el nombre que describe la baja lógica.
+        with self.assertRaises(NoReverseMatch):
+            reverse('locales:eliminar', args=[self.local.pk])
 
     def test_desactivar_oculta_pero_no_borra(self):
         self.client.force_login(self.dueno)
@@ -160,6 +202,27 @@ class ListadoYDesactivarTests(LocalesBase):
 
 
 class ModeloLocalTests(TestCase):
+    def test_longitudes_de_campos_de_texto(self):
+        self.assertEqual(Local._meta.get_field('nombre').max_length, 80)
+        self.assertEqual(Local._meta.get_field('direccion').max_length, 150)
+        self.assertEqual(Local._meta.get_field('ciudad').max_length, 100)
+        self.assertEqual(Local._meta.get_field('telefono').max_length, 20)
+
+    def test_modelo_normaliza_espacios_al_guardar(self):
+        local = Local.objects.create(
+            nombre='  Salón   Luna ',
+            direccion=' Calle   1 # 2-3 ',
+            ciudad='  Bogotá ',
+            telefono=' 300 123 4567 ',
+            descripcion='  Belleza   natural ',
+        )
+        local.refresh_from_db()
+        self.assertEqual(local.nombre, 'Salón Luna')
+        self.assertEqual(local.direccion, 'Calle 1 # 2-3')
+        self.assertEqual(local.ciudad, 'Bogotá')
+        self.assertEqual(local.telefono, '300 123 4567')
+        self.assertEqual(local.descripcion, 'Belleza natural')
+
     def test_borrar_dueno_no_borra_el_local(self):
         dueno = Usuario.objects.create_user('dueno2@example.com', CLAVE, nombre='Dueño Dos')
         local = Local.objects.create(

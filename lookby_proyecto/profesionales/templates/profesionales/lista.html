@@ -12,7 +12,7 @@
     <li>
       <strong><a href="{% url 'profesionales:detalle' profesional.pk %}">{{ profesional.usuario.nombre_completo }}</a></strong>
       {% if profesional.domicilio %}(a domicilio){% endif %}
-      <p>{{ profesional.biografia|default:'Sin biografía.' }}</p>
+      <p class="linea-limitada">{{ profesional.biografia|default:'Sin biografía.' }}</p>
       <small>
         Domicilio: {% if profesional.domicilio %}sí{% else %}no{% endif %} ·
         Coordenadas: {% if profesional.latitud and profesional.longitud %}
@@ -24,13 +24,14 @@
           <li>{{ horario.get_dia_semana_display }} {{ horario.hora_inicio }}–{{ horario.hora_fin }}
             {% if horario.local %}({{ horario.local.nombre }}){% endif %}</li>
         {% empty %}
-          <li>Sin horarios publicados.</li>
+          <li class="estado-vacio">Sin horarios publicados.</li>
         {% endfor %}
       </ul>
     </li>
   {% empty %}
-    <li>Aún no hay profesionales registrados.</li>
+    <li class="estado-vacio">Aún no hay profesionales registrados.</li>
   {% endfor %}
 </ul>
+{% include 'catalogos/_paginacion.html' %}
 </div>
 {% endblock %}

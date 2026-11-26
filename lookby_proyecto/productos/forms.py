@@ -1,5 +1,7 @@
 from django import forms
 
+from usuarios.validators import DESCRIPCION_MAX, normalizar_espacios
+
 from .models import Producto
 
 
@@ -13,18 +15,19 @@ class ProductoForm(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'placeholder': 'Ej. Champú hidratante'}),
             'descripcion': forms.Textarea(attrs={
                 'rows': 3,
-                'placeholder': 'Describe brevemente el producto...',
+                'maxlength': DESCRIPCION_MAX,
+                'placeholder': 'Describe brevemente el producto (máximo 500 caracteres)...',
             }),
             'categoria': forms.TextInput(attrs={'placeholder': 'Ej. Cuidado personal'}),
         }
 
     def clean(self):
         datos = super().clean()
-        nombre = (datos.get('nombre') or '').strip()
-        categoria = (datos.get('categoria') or '').strip()
+        nombre = normalizar_espacios(datos.get('nombre'))
+        categoria = normalizar_espacios(datos.get('categoria'))
+        datos['descripcion'] = normalizar_espacios(datos.get('descripcion')) or ''
 
         if nombre:
-            nombre = ' '.join(nombre.split())
             datos['nombre'] = nombre
             repetidos = Producto.objects.filter(nombre__iexact=nombre)
             if self.instance.pk:
@@ -33,6 +36,6 @@ class ProductoForm(forms.ModelForm):
                 self.add_error('nombre', 'Ya existe un producto con ese nombre.')
 
         if categoria:
-            datos['categoria'] = ' '.join(categoria.split())
+            datos['categoria'] = categoria
 
         return datos

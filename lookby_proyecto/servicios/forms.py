@@ -1,6 +1,7 @@
 from django import forms
 
 from usuarios.permisos import es_admin
+from usuarios.validators import DESCRIPCION_MAX, normalizar_espacios
 
 from profesionales.models import Profesional
 
@@ -14,15 +15,20 @@ class ServicioForm(forms.ModelForm):
         model = Servicio
         fields = ('nombre', 'categoria', 'descripcion')
         widgets = {
-            'descripcion': forms.Textarea(attrs={'rows': 4}),
+            'descripcion': forms.Textarea(attrs={
+                'rows': 4,
+                'maxlength': DESCRIPCION_MAX,
+                'placeholder': 'Máximo 500 caracteres.',
+            }),
         }
 
     def clean(self):
         cleaned = super().clean()
-        nombre = (cleaned.get('nombre') or '').strip()
-        categoria = (cleaned.get('categoria') or '').strip()
+        nombre = normalizar_espacios(cleaned.get('nombre'))
+        categoria = normalizar_espacios(cleaned.get('categoria'))
         cleaned['nombre'] = nombre
         cleaned['categoria'] = categoria
+        cleaned['descripcion'] = normalizar_espacios(cleaned.get('descripcion')) or ''
 
         if nombre:
             repetidos = Servicio.objects.filter(nombre__iexact=nombre)
@@ -43,6 +49,18 @@ class OfertaServicioForm(forms.ModelForm):
             'duracion': 'Duración (minutos)',
             'activa': 'Oferta activa',
         }
+        # El precio hereda los validadores compartidos del modelo (validadores_precio):
+        # 0 es válido, los negativos y más de 2 decimales se rechazan.
+        error_messages = {
+            'precio': {
+                'min_value': 'El precio no puede ser negativo. Usa 0 si es gratuito.',
+                'max_value': 'El precio supera el máximo permitido.',
+                'decimal_places': 'El precio admite máximo 2 decimales.',
+            },
+        }
+        widgets = {
+            'precio': forms.NumberInput(attrs={'min': '0', 'step': '0.01'}),
+        }
 
     def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,15 +73,12 @@ class OfertaServicioForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        precio = cleaned.get('precio')
         duracion = cleaned.get('duracion')
         servicio = cleaned.get('servicio')
         profesional = cleaned.get('profesional')
         local = cleaned.get('local')
         activa = cleaned.get('activa', False)
 
-        if precio is not None and precio <= 0:
-            self.add_error('precio', 'El precio debe ser mayor que cero.')
         if duracion is not None:
             if duracion <= 0:
                 self.add_error('duracion', 'La duración debe ser mayor que cero.')

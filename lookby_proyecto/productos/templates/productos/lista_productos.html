@@ -6,14 +6,15 @@
   <h2>Catálogo de productos</h2>
   <p>Productos disponibles con sus precios por local.</p>
 
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Listado de productos">
   <table>
     <thead>
       <tr>
-        <th>Producto</th>
-        <th>Categoría</th>
-        <th>Descripción</th>
-        <th>Precios por local</th>
-        <th>Acciones</th>
+        <th scope="col">Producto</th>
+        <th scope="col">Categoría</th>
+        <th scope="col">Descripción</th>
+        <th scope="col">Precios por local</th>
+        <th scope="col">Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -24,7 +25,7 @@
             {% if not p.activo %}<span class="badge warn">Desactivado</span>{% endif %}
           </td>
           <td>{{ p.categoria|default:"Sin categoría" }}</td>
-          <td>{{ p.descripcion|default:"—" }}</td>
+          <td class="linea-limitada">{{ p.descripcion|default:"—" }}</td>
           <td>
             {% for inv in p.inventarios.all %}
               ${{ inv.precio_venta }} <small>({{ inv.local.nombre }})</small>{% if not forloop.last %}<br>{% endif %}
@@ -42,10 +43,13 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="5">No hay productos registrados todavía.</td></tr>
+        <tr><td class="estado-vacio" colspan="5">No hay productos registrados todavía.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
+
+  {% include 'catalogos/_paginacion.html' %}
 
   {% if user|es_admin %}
     <p><a class="btn-accion" href="{% url 'productos:crear' %}">+ Nuevo producto</a></p>

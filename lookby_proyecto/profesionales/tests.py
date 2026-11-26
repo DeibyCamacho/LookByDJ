@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from usuarios.models import Usuario
@@ -116,3 +117,33 @@ class CrudProfesionalesTests(TestCase):
         respuesta = self.client.post(f'/profesionales/{self.otro_profesional.pk}/eliminar/')
         self.assertEqual(respuesta.status_code, 302)
         self.assertFalse(Profesional.objects.filter(pk=self.otro_profesional.pk).exists())
+
+    def test_biografia_no_puede_superar_500_caracteres(self):
+        datos = {'usuario': self.profesional.usuario_id, 'biografia': 'x' * 501}
+        form = ProfesionalForm(data=datos)
+        self.assertFalse(form.is_valid())
+        self.assertIn('biografia', form.errors)
+
+        self.profesional.biografia = 'x' * 501
+        with self.assertRaises(ValidationError):
+            self.profesional.full_clean()
+
+        self.profesional.biografia = 'x' * 500
+        self.profesional.full_clean()
+
+    def test_lista_profesionales_paginada_a_20(self):
+        for numero in range(20):
+            usuario = Usuario.objects.create_user(
+                correo=f'extra{numero}@ejemplo.com', password='clave123',
+                nombre='Extra',
+            )
+            Profesional.objects.create(usuario=usuario)
+
+        primera = self.client.get('/profesionales/')
+        self.assertEqual(primera.status_code, 200)
+        self.assertEqual(len(primera.context['page_obj'].object_list), 20)
+        self.assertTrue(primera.context['page_obj'].has_next())
+
+        segunda = self.client.get('/profesionales/?page=2')
+        self.assertEqual(len(segunda.context['page_obj'].object_list), 2)
+        self.assertContains(primera, 'Página 1 de 2')

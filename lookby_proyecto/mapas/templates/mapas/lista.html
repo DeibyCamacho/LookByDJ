@@ -4,6 +4,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   #mapa-lookby { height: 460px; width: 100%; border-radius: 16px; border: 1px solid var(--border); margin: 18px 0; }
+  .aviso-mapa { padding: 10px 14px; border-radius: 10px; background: #fff4e5; color: #7a4b00; }
+  [hidden] { display: none !important; }
 </style>
 {% endblock %}
 {% block content %}
@@ -11,7 +13,29 @@
   <h2>Mapa de locales</h2>
   <p>Locales publicados desde la vista <code>VW_MAPA_LOCALES</code>, con OpenStreetMap.</p>
 
-  <div id="mapa-lookby"></div>
+  {% if fallo_mapa %}
+    <p class="aviso-mapa" role="alert" aria-live="assertive">
+      No pudimos consultar los datos del mapa en este momento. Inténtalo de nuevo más tarde.
+    </p>
+  {% elif sin_datos_mapa %}
+    <p class="aviso-mapa" role="status" aria-live="polite">
+      Todavía no hay locales con coordenadas publicadas en el mapa.
+    </p>
+  {% endif %}
+
+  <div id="mapa-lookby" role="region" aria-label="Mapa interactivo de locales"></div>
+
+  <p id="aviso-tiles-mapa" class="aviso-mapa" role="alert" aria-live="assertive" hidden>
+    No pudimos cargar los mapas de OpenStreetMap. Te mostramos los locales en un listado.
+  </p>
+  <p id="aviso-datos-mapa" class="aviso-mapa" role="alert" aria-live="assertive" hidden>
+    No se pudieron cargar los locales del mapa. Puedes intentarlo de nuevo más tarde.
+  </p>
+
+  <div id="respaldo-mapa" hidden>
+    <h3>Listado de locales</h3>
+    <ul id="lista-respaldo-mapa"></ul>
+  </div>
 
   <ul>
     {% for local in locales %}
@@ -30,43 +54,122 @@
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const mapa = L.map('mapa-lookby').setView([6.2518, -75.5636], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 18
-  }).addTo(mapa);
+(function () {
+  'use strict';
+  var contenedor = document.getElementById('mapa-lookby');
+  var avisoTiles = document.getElementById('aviso-tiles-mapa');
+  var avisoDatos = document.getElementById('aviso-datos-mapa');
+  var respaldo = document.getElementById('respaldo-mapa');
+  var listaRespaldo = document.getElementById('lista-respaldo-mapa');
+  var datos = { locales: [] };
+  var respaldoActivo = false;
+  var mapa = null;
 
-  fetch('{% url "mapas:api_locales" %}')
-    .then(r => r.json())
-    .then(data => {
-      const puntos = [];
-      data.locales.forEach(local => {
-        // Number(null) es 0: por eso se comprueba null antes de convertir.
-        if (local.latitud === null || local.longitud === null) return;
-        const lat = Number(local.latitud);
-        const lng = Number(local.longitud);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-        if (lat === 0 && lng === 0) return;
+  if (!contenedor) { return; }
 
-        const popup = document.createElement('div');
-        const titulo = document.createElement('strong');
-        titulo.textContent = local.nombre;
-        popup.appendChild(titulo);
-        popup.appendChild(document.createElement('br'));
-        popup.appendChild(document.createTextNode(local.direccion));
-        popup.appendChild(document.createElement('br'));
-        popup.appendChild(document.createTextNode(
-          local.calificacion === null ? 'Sin calificar' : '⭐ ' + local.calificacion
-        ));
-        L.marker([lat, lng]).addTo(mapa).bindPopup(popup);
-        puntos.push([lat, lng]);
-      });
-      if (puntos.length) mapa.fitBounds(puntos, { padding: [40, 40] });
-    })
-    .catch(() => {
-      const aviso = document.createElement('p');
-      aviso.textContent = 'No se pudieron cargar los locales del mapa.';
-      document.getElementById('mapa-lookby').after(aviso);
+  function renderRespaldo() {
+    if (!respaldoActivo) { return; }
+    while (listaRespaldo.firstChild) {
+      listaRespaldo.removeChild(listaRespaldo.firstChild);
+    }
+    var locales = Array.isArray(datos.locales) ? datos.locales : [];
+    if (!locales.length) {
+      var vacio = document.createElement('li');
+      vacio.appendChild(document.createTextNode('No hay locales disponibles en este momento.'));
+      listaRespaldo.appendChild(vacio);
+    }
+    locales.forEach(function (local) {
+      var item = document.createElement('li');
+      var nombre = document.createElement('strong');
+      nombre.textContent = local.nombre || 'Local sin nombre';
+      item.appendChild(nombre);
+      item.appendChild(document.createTextNode(
+        ' — ' + (local.direccion || 'Dirección no disponible')
+      ));
+      var nota = document.createElement('span');
+      nota.textContent = local.sin_calificar
+        ? ' Sin calificar'
+        : ' ⭐ ' + local.calificacion;
+      item.appendChild(nota);
+      listaRespaldo.appendChild(item);
     });
+    respaldo.hidden = false;
+  }
+
+  function activarRespaldo() {
+    respaldoActivo = true;
+    renderRespaldo();
+  }
+
+  if (typeof L === 'undefined') {
+    avisoTiles.hidden = false;
+    activarRespaldo();
+  } else {
+    mapa = L.map('mapa-lookby').setView([6.2518, -75.5636], 12);
+    var capaTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+      // Evita que el Referer de HTTPS provoque el 403 de los tiles de OSM.
+      referrerPolicy: 'no-referrer'
+    });
+    var fallosTiles = 0;
+    capaTiles.on('tileerror', function () {
+      fallosTiles += 1;
+      if (fallosTiles < 3) { return; }
+      avisoTiles.hidden = false;
+      activarRespaldo();
+    });
+    capaTiles.addTo(mapa);
+  }
+
+  function cargarLocales() {
+    return fetch('{% url "mapas:api_locales" %}')
+      .then(function (respuesta) {
+        if (!respuesta.ok) { throw new Error('Respuesta HTTP ' + respuesta.status); }
+        return respuesta.json();
+      })
+      .then(function (json) {
+        datos = json;
+        var puntos = [];
+        if (mapa !== null) {
+          (datos.locales || []).forEach(function (local) {
+            // Number(null) es 0: por eso se comprueba null antes de convertir.
+            if (local.latitud === null || local.longitud === null) { return; }
+            var lat = Number(local.latitud);
+            var lng = Number(local.longitud);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) { return; }
+            if (lat === 0 && lng === 0) { return; }
+
+            var popup = document.createElement('div');
+            var titulo = document.createElement('strong');
+            titulo.textContent = local.nombre;
+            popup.appendChild(titulo);
+            popup.appendChild(document.createElement('br'));
+            popup.appendChild(document.createTextNode(local.direccion || ''));
+            popup.appendChild(document.createElement('br'));
+            popup.appendChild(document.createTextNode(
+              local.sin_calificar ? 'Sin calificar' : '⭐ ' + local.calificacion
+            ));
+            L.marker([lat, lng]).addTo(mapa).bindPopup(popup);
+            puntos.push([lat, lng]);
+          });
+          if (puntos.length) { mapa.fitBounds(puntos, { padding: [40, 40] }); }
+        }
+        // Si la capa ya falló, el listado de respaldo se actualiza con estos datos.
+        renderRespaldo();
+      })
+      .catch(function () {
+        avisoDatos.hidden = false;
+        activarRespaldo();
+      });
+  }
+
+  if (typeof fetch === 'function') {
+    cargarLocales();
+  } else {
+    avisoDatos.hidden = false;
+    activarRespaldo();
+  }
+}());
 </script>
 {% endblock %}

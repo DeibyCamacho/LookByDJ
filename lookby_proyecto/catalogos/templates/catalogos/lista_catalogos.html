@@ -6,13 +6,14 @@
   <h2>Catálogos de LookBy</h2>
   <p>Listado de catálogos publicados por local.</p>
 
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Listado de catálogos">
   <table>
     <thead>
       <tr>
-        <th>Catálogo</th>
-        <th>Local</th>
-        <th>Productos</th>
-        <th>Acciones</th>
+        <th scope="col">Catálogo</th>
+        <th scope="col">Local</th>
+        <th scope="col">Productos</th>
+        <th scope="col">Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -20,7 +21,7 @@
         <tr>
           <td><strong>{{ catalogo.nombre }}</strong></td>
           <td>{{ catalogo.local.nombre }}</td>
-          <td>{{ catalogo.productos.count }}</td>
+          <td>{{ catalogo.num_productos }}</td>
           <td>
             <a href="{% url 'catalogos:detalle' catalogo.pk %}">Ver detalle</a>
             {% if user|es_admin %}
@@ -30,10 +31,13 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="4">Aún no hay catálogos registrados.</td></tr>
+        <tr><td class="estado-vacio" colspan="4">Aún no hay catálogos registrados.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
+
+  {% include 'catalogos/_paginacion.html' %}
 
   {% if user|es_admin %}
     <p><a class="btn-accion" href="{% url 'catalogos:crear' %}">+ Nuevo catálogo</a></p>

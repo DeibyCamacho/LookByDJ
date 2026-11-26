@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
@@ -25,6 +26,9 @@ class InventarioTests(TestCase):
         )
         rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
         self.admin.roles.add(rol)
+        # Las escrituras exigen administrar el local; este admin sí lo administra.
+        self.local.usuario = self.admin
+        self.local.save(update_fields=['usuario'])
         self.cliente = Usuario.objects.create_user(
             correo='cliente@prueba.com', password='clave123', nombre='Cliente'
         )
@@ -57,14 +61,18 @@ class InventarioTests(TestCase):
         form = InventarioForm(self.datos(local=self.otro_local.pk))
         self.assertTrue(form.is_valid(), form.errors)
 
-    def test_form_rechaza_stock_negativo_y_precio_cero(self):
+    def test_form_rechaza_stock_negativo_y_precio_negativo(self):
         form = InventarioForm(self.datos(stock_actual='-1'))
         self.assertFalse(form.is_valid())
         self.assertIn('stock_actual', form.errors)
 
-        form = InventarioForm(self.datos(precio_venta='0'))
+        form = InventarioForm(self.datos(precio_venta='-1'))
         self.assertFalse(form.is_valid())
         self.assertIn('precio_venta', form.errors)
+
+        # La regla es >= 0: el precio cero es válido (producto gratuito).
+        form = InventarioForm(self.datos(precio_venta='0'))
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_listado_solo_admin(self):
         self.assertIn('/usuarios/entrar/', self.client.get(reverse('inventario:lista'))['Location'])
@@ -104,3 +112,71 @@ class InventarioTests(TestCase):
         r = self.client.post(reverse('inventario:eliminar', args=[item.pk]))
         self.assertEqual(r.status_code, 302)
         self.assertTrue(InventarioLocal.objects.filter(pk=item.pk).exists())
+
+    def test_modelo_valida_precio_y_tope_de_stock(self):
+        item = InventarioLocal(
+            local=self.local, producto=self.producto,
+            precio_venta=Decimal('0'), stock_actual=100000,
+        )
+        item.full_clean()  # 0 y 100000 son válidos.
+
+        item.precio_venta = Decimal('-1')
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+        item.precio_venta = Decimal('0')
+        item.stock_actual = 100001
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+        form = InventarioForm(self.datos(stock_actual='100001'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('stock_actual', form.errors)
+
+    def test_admin_de_otro_local_no_puede_gestionar_inventario(self):
+        item = InventarioLocal.objects.create(
+            local=self.local, producto=self.producto,
+            precio_venta=Decimal('10000'), stock_actual=1,
+        )
+        otro_admin = Usuario.objects.create_user(
+            correo='otro-admin@prueba.com', password='clave123', nombre='Otro',
+        )
+        rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
+        otro_admin.roles.add(rol)
+        self.otro_local.usuario = otro_admin
+        self.otro_local.save(update_fields=['usuario'])
+        self.client.force_login(otro_admin)
+
+        self.assertEqual(
+            self.client.post(reverse('inventario:crear'), self.datos()).status_code, 403
+        )
+        self.assertEqual(
+            self.client.get(reverse('inventario:editar', args=[item.pk])).status_code, 403
+        )
+        self.assertEqual(
+            self.client.post(reverse('inventario:eliminar', args=[item.pk])).status_code, 403
+        )
+        self.assertTrue(InventarioLocal.objects.filter(pk=item.pk).exists())
+
+        # El superusuario sí puede gestionar inventario ajeno.
+        superusuario = Usuario.objects.create_superuser(
+            correo='root@prueba.com', password='clave123', nombre='Root',
+        )
+        self.client.force_login(superusuario)
+        self.assertEqual(
+            self.client.get(reverse('inventario:editar', args=[item.pk])).status_code, 200
+        )
+
+    def test_lista_inventario_paginada_a_20(self):
+        self.client.force_login(self.admin)
+        for numero in range(21):
+            producto = Producto.objects.create(nombre=f'Extra {numero}')
+            InventarioLocal.objects.create(
+                local=self.local, producto=producto,
+                precio_venta=Decimal('1000'), stock_actual=1,
+            )
+        primera = self.client.get(reverse('inventario:lista'))
+        self.assertEqual(len(primera.context['page_obj'].object_list), 20)
+        self.assertTrue(primera.context['page_obj'].has_next())
+        segunda = self.client.get(reverse('inventario:lista') + '?page=2')
+        self.assertEqual(len(segunda.context['page_obj'].object_list), 1)

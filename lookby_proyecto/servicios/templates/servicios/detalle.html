@@ -12,7 +12,7 @@
       — ${{ oferta.precio }} / {{ oferta.duracion }} min
       {% if not oferta.activa %}(inactiva){% endif %}</li>
   {% empty %}
-    <li>Sin ofertas registradas.</li>
+    <li class="estado-vacio">Sin ofertas registradas.</li>
   {% endfor %}
 </ul>
 <div class="acciones">

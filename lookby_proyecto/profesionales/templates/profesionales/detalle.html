@@ -16,7 +16,7 @@
       {{ horario.get_dia_semana_display }} {{ horario.hora_inicio }}–{{ horario.hora_fin }}
       {% if horario.local %}({{ horario.local.nombre }}){% endif %}</a></li>
   {% empty %}
-    <li>Sin horarios publicados.</li>
+    <li class="estado-vacio">Sin horarios publicados.</li>
   {% endfor %}
 </ul>
 <div class="acciones">

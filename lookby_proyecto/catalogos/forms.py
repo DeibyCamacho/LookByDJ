@@ -1,6 +1,7 @@
 from django import forms
 
 from inventario.models import InventarioLocal
+from usuarios.validators import DESCRIPCION_MAX, normalizar_espacios
 
 from .models import Catalogo, CatalogoProducto
 
@@ -11,16 +12,20 @@ class CatalogoForm(forms.ModelForm):
         fields = ['nombre', 'descripcion', 'local']
         widgets = {
             'nombre': forms.TextInput(attrs={'placeholder': 'Ej. Catálogo de verano'}),
-            'descripcion': forms.Textarea(attrs={'rows': 3}),
+            'descripcion': forms.Textarea(attrs={
+                'rows': 3,
+                'maxlength': DESCRIPCION_MAX,
+                'placeholder': 'Máximo 500 caracteres.',
+            }),
         }
 
     def clean(self):
         datos = super().clean()
-        nombre = (datos.get('nombre') or '').strip()
+        nombre = normalizar_espacios(datos.get('nombre'))
         local = datos.get('local')
+        datos['descripcion'] = normalizar_espacios(datos.get('descripcion')) or ''
 
         if nombre:
-            nombre = ' '.join(nombre.split())
             datos['nombre'] = nombre
             repetidos = Catalogo.objects.filter(nombre__iexact=nombre)
             if local is not None:

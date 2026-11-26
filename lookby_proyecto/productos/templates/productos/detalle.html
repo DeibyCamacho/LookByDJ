@@ -8,8 +8,9 @@
   <p>{{ producto.descripcion|default:"Sin descripción." }}</p>
 
   <h3>Disponibilidad y precios por local</h3>
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Disponibilidad y precios por local">
   <table>
-    <thead><tr><th>Local</th><th>Precio de venta</th><th>Stock</th></tr></thead>
+    <thead><tr><th scope="col">Local</th><th scope="col">Precio de venta</th><th scope="col">Stock</th></tr></thead>
     <tbody>
       {% for inv in producto.inventarios.all %}
         <tr>
@@ -18,10 +19,11 @@
           <td>{{ inv.stock_actual }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="3">Este producto aún no tiene existencias registradas.</td></tr>
+        <tr><td class="estado-vacio" colspan="3">Este producto aún no tiene existencias registradas.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
   {% if user|es_admin %}
     <p>

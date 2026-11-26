@@ -1,7 +1,17 @@
 from django.db import models
 
+from usuarios.validators import BIOGRAFIA_MAX, validador_texto_largo
+
+
 class Profesional(models.Model):
-    biografia = models.TextField(blank=True)
+    biografia = models.TextField(
+        blank=True,
+        validators=[validador_texto_largo(BIOGRAFIA_MAX)],
+        help_text=f'Cuéntanos brevemente tu experiencia (máximo {BIOGRAFIA_MAX} caracteres).',
+        error_messages={
+            'max_length': f'La biografía no puede superar los {BIOGRAFIA_MAX} caracteres.',
+        },
+    )
     domicilio = models.BooleanField(default=False)
     latitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)

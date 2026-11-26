@@ -5,15 +5,16 @@
   <h2>Control de stock por local</h2>
   <p><a class="btn-accion" href="{% url 'inventario:crear' %}">+ Nuevo registro de inventario</a></p>
 
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Inventario por local">
   <table>
     <thead>
       <tr>
-        <th>Producto</th>
-        <th>Local / Sede</th>
-        <th>Cantidad disponible</th>
-        <th>Precio de venta</th>
-        <th>Estado</th>
-        <th>Acciones</th>
+        <th scope="col">Producto</th>
+        <th scope="col">Local / Sede</th>
+        <th scope="col">Cantidad disponible</th>
+        <th scope="col">Precio de venta</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -37,9 +38,12 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="6">No hay registros de inventario aún. <a href="{% url 'inventario:crear' %}">Agrega el primero</a>.</td></tr>
+        <tr><td class="estado-vacio" colspan="6">No hay registros de inventario aún. <a href="{% url 'inventario:crear' %}">Agrega el primero</a>.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
+
+  {% include 'catalogos/_paginacion.html' %}
 </div>
 {% endblock %}

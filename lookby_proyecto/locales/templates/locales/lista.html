@@ -14,7 +14,7 @@
     <p>{{ local.direccion }}, {{ local.ciudad }}</p>
   </section>
 {% empty %}
-  <p>Aún no hay locales registrados.</p>
+  <p class="estado-vacio">Aún no hay locales registrados.</p>
 {% endfor %}
 {% if user.is_authenticated %}<p><a href="{% url 'locales:crear' %}">Registrar local</a></p>{% endif %}
 </div>

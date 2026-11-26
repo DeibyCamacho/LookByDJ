@@ -1,6 +1,7 @@
 from django import forms
 
 from usuarios.permisos import es_admin
+from usuarios.validators import BIOGRAFIA_MAX, normalizar_espacios
 
 from .models import Horario, Profesional
 
@@ -12,7 +13,11 @@ class ProfesionalForm(forms.ModelForm):
         model = Profesional
         fields = ('usuario', 'biografia', 'domicilio', 'latitud', 'longitud')
         widgets = {
-            'biografia': forms.Textarea(attrs={'rows': 4}),
+            'biografia': forms.Textarea(attrs={
+                'rows': 4,
+                'maxlength': BIOGRAFIA_MAX,
+                'placeholder': 'Máximo 500 caracteres.',
+            }),
         }
         labels = {
             'usuario': 'Usuario',
@@ -49,7 +54,7 @@ class ProfesionalForm(forms.ModelForm):
             if not -180 <= float(longitud) <= 180:
                 self.add_error('longitud', 'La longitud debe estar entre -180 y 180.')
 
-        cleaned['biografia'] = (cleaned.get('biografia') or '').strip()
+        cleaned['biografia'] = normalizar_espacios(cleaned.get('biografia')) or ''
         return cleaned
 
 

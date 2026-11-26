@@ -8,9 +8,10 @@
   {% for horario in horarios %}
     <li><a href="{% url 'profesionales:horario_detalle' horario.pk %}">{{ horario }}</a></li>
   {% empty %}
-    <li>Aún no hay horarios registrados.</li>
+    <li class="estado-vacio">Aún no hay horarios registrados.</li>
   {% endfor %}
 </ul>
+{% include 'catalogos/_paginacion.html' %}
 <p><a href="{% url 'profesionales:lista' %}">Volver a profesionales</a></p>
 </div>
 {% endblock %}

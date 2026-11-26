@@ -11,9 +11,10 @@
       — ${{ oferta.precio }} / {{ oferta.duracion }} min
       {% if oferta.activa %}<span class="badge">Activa</span>{% else %}<span class="badge">Inactiva</span>{% endif %}</li>
   {% empty %}
-    <li>Aún no hay ofertas registradas.</li>
+    <li class="estado-vacio">Aún no hay ofertas registradas.</li>
   {% endfor %}
 </ul>
+{% include 'catalogos/_paginacion.html' %}
 <p><a href="{% url 'servicios:lista' %}">Volver a servicios</a></p>
 </div>
 {% endblock %}

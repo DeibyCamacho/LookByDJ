@@ -17,7 +17,7 @@
       <a href="{% url 'citas:crear' %}">Reservar</a>
     </li>
   {% empty %}
-    <li>Aún no hay ofertas activas.</li>
+    <li class="estado-vacio">Aún no hay ofertas activas.</li>
   {% endfor %}
 </ul>
 </section>
@@ -28,10 +28,15 @@
   {% for servicio in servicios %}
     <li><a href="{% url 'servicios:detalle' servicio.pk %}">{{ servicio.nombre }}</a> — {{ servicio.categoria }}</li>
   {% empty %}
-    <li>Aún no hay servicios registrados.</li>
+    <li class="estado-vacio">Aún no hay servicios registrados.</li>
   {% endfor %}
 </ul>
 </section>
+
+{% include 'catalogos/_paginacion.html' %}
+{% with page_obj=servicios_page page_param='page_servicios' %}
+  {% include 'catalogos/_paginacion.html' %}
+{% endwith %}
 
 <p>
   <a href="{% url 'servicios:ofertas_lista' %}">Ver todas las ofertas</a>

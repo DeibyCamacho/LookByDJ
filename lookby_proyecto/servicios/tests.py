@@ -1,9 +1,11 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
+from locales.models import Local
 from profesionales.models import Profesional
-from usuarios.models import Usuario
+from usuarios.models import Rol, Usuario
 
 from .forms import OfertaServicioForm, ServicioForm
 from .models import OfertaServicio, Servicio
@@ -115,3 +117,97 @@ class CrudServiciosTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn('Precios de servicios activos', contenido)
         self.assertIn('15000', contenido)
+
+    def test_descripcion_no_puede_superar_500_caracteres(self):
+        form = ServicioForm(data={
+            'nombre': 'Servicio extenso', 'categoria': 'Peluquería',
+            'descripcion': 'x' * 501,
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('descripcion', form.errors)
+
+        self.servicio.descripcion = 'x' * 501
+        with self.assertRaises(ValidationError):
+            self.servicio.full_clean()
+
+    def test_precio_cero_valido_y_negativo_rechazado(self):
+        datos = {
+            'servicio': self.servicio.pk, 'profesional': self.profesional.pk,
+            'duracion': '45',
+        }
+        form = OfertaServicioForm(data={**datos, 'precio': '0'})
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form = OfertaServicioForm(data={**datos, 'precio': '-1'})
+        self.assertFalse(form.is_valid())
+        self.assertIn('precio', form.errors)
+
+        oferta = OfertaServicio(
+            servicio=self.servicio, profesional=self.profesional,
+            precio=Decimal('-1'), duracion=45,
+        )
+        with self.assertRaises(ValidationError):
+            oferta.full_clean()
+
+    def test_admin_de_otro_local_no_puede_gestionar_oferta(self):
+        local = Local.objects.create(
+            nombre='Centro', direccion='Calle 1', ciudad='Medellín'
+        )
+        dueno = Usuario.objects.create_user(
+            correo='dueno@ejemplo.com', password='clave123', nombre='Dueño',
+        )
+        rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
+        dueno.roles.add(rol)
+        local.usuario = dueno
+        local.save(update_fields=['usuario'])
+
+        otro_local = Local.objects.create(
+            nombre='Norte', direccion='Calle 2', ciudad='Bogotá'
+        )
+        otro_admin = Usuario.objects.create_user(
+            correo='otro-admin@ejemplo.com', password='clave123', nombre='Otro',
+        )
+        otro_admin.roles.add(rol)
+        otro_local.usuario = otro_admin
+        otro_local.save(update_fields=['usuario'])
+
+        oferta = OfertaServicio.objects.create(
+            servicio=self.servicio, profesional=self.profesional,
+            precio=Decimal('15000'), duracion=45, local=local,
+        )
+        self.client.force_login(otro_admin)
+        url = f'/servicios/ofertas/{oferta.pk}/editar/'
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.post(f'/servicios/ofertas/{oferta.pk}/eliminar/').status_code, 403)
+        self.assertEqual(self.client.post('/servicios/ofertas/crear/', {
+            'servicio': self.servicio.pk,
+            'profesional': self.profesional.pk,
+            'precio': '15000',
+            'duracion': '45',
+            'local': local.pk,
+        }).status_code, 403)
+        oferta.refresh_from_db()
+        self.assertTrue(oferta.activa)
+
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_listados_de_servicios_y_ofertas_paginados_a_20(self):
+        for numero in range(21):
+            Servicio.objects.create(
+                nombre=f'Servicio {numero}', categoria='Peluquería'
+            )
+            OfertaServicio.objects.create(
+                servicio=self.servicio, profesional=self.profesional,
+                precio=Decimal('10000'), duracion=30,
+            )
+        respuesta = self.client.get('/servicios/ofertas/')
+        self.assertEqual(len(respuesta.context['page_obj'].object_list), 20)
+        self.assertContains(respuesta, 'Página 1 de 2')
+
+        respuesta = self.client.get('/servicios/ofertas/?page=2')
+        self.assertEqual(len(respuesta.context['page_obj'].object_list), 1)
+
+        servicios = self.client.get('/servicios/')
+        self.assertEqual(len(servicios.context['page_obj'].object_list), 20)
+        self.assertEqual(len(servicios.context['servicios_page'].object_list), 20)

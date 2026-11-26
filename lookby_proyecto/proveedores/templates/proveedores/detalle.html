@@ -7,8 +7,9 @@
   <p><strong>Correo:</strong> {{ proveedor.correo }}</p>
 
   <h3>Productos suministrados</h3>
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Productos suministrados">
   <table>
-    <thead><tr><th>Producto</th><th>Precio de mayoreo</th><th>Acciones</th></tr></thead>
+    <thead><tr><th scope="col">Producto</th><th scope="col">Precio de mayoreo</th><th scope="col">Acciones</th></tr></thead>
     <tbody>
       {% for item in proveedor.productos_suministrados.all %}
         <tr>
@@ -20,10 +21,11 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="3">Este proveedor aún no tiene productos asociados.</td></tr>
+        <tr><td class="estado-vacio" colspan="3">Este proveedor aún no tiene productos asociados.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
   <p><a href="{% url 'proveedores:suministro_crear' proveedor.pk %}">Agregar producto</a></p>
 
   <p>

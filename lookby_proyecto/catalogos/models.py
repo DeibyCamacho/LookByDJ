@@ -1,11 +1,20 @@
 from django.db import models
 
+from usuarios.validators import DESCRIPCION_MAX, validador_texto_largo
+
 
 class Catalogo(models.Model):
     """MER: CATALOGO (idLocal FK)."""
 
     nombre = models.CharField(max_length=150)
-    descripcion = models.TextField(blank=True)
+    descripcion = models.TextField(
+        blank=True,
+        validators=[validador_texto_largo(DESCRIPCION_MAX)],
+        help_text=f'Describe el catálogo en {DESCRIPCION_MAX} caracteres como máximo.',
+        error_messages={
+            'max_length': f'La descripción no puede superar los {DESCRIPCION_MAX} caracteres.',
+        },
+    )
     local = models.ForeignKey(
         'locales.Local',
         on_delete=models.CASCADE,
@@ -34,6 +43,8 @@ class CatalogoProducto(models.Model):
     )
 
     class Meta:
+        # Se conserva `unique_together` (legacy): convertirlo en UniqueConstraint
+        # nominal exigiría una migración adicional y no aporta aquí ninguna regla nueva.
         unique_together = ('catalogo', 'inventario')
 
     @property

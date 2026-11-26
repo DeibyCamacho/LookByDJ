@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import ProtectedError
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,11 +21,12 @@ def puede_editar_profesional(usuario, profesional):
 def lista_profesionales(request):
     profesionales = Profesional.objects.select_related('usuario').prefetch_related(
         'horarios__local'
-    ).all()
+    ).order_by('pk')
+    pagina = Paginator(profesionales, 20).get_page(request.GET.get('page'))
     return render(
         request,
         'profesionales/lista.html',
-        {'profesionales': profesionales},
+        {'profesionales': pagina, 'page_obj': pagina},
     )
 
 
@@ -98,8 +100,11 @@ def eliminar_profesional(request, pk):
 def lista_horarios(request):
     horarios = Horario.objects.select_related(
         'profesional__usuario', 'local'
-    ).all()
-    return render(request, 'profesionales/horarios_lista.html', {'horarios': horarios})
+    ).order_by('pk')
+    pagina = Paginator(horarios, 20).get_page(request.GET.get('page'))
+    return render(request, 'profesionales/horarios_lista.html', {
+        'horarios': pagina, 'page_obj': pagina,
+    })
 
 
 @login_required

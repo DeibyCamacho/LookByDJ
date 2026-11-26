@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from usuarios.permisos import admin_required
@@ -10,8 +11,11 @@ from .models import Proveedor, ProveedorProducto
 
 @admin_required
 def lista_proveedores(request):
-    proveedores = Proveedor.objects.all()
-    return render(request, 'proveedores/lista.html', {'proveedores': proveedores})
+    proveedores = Proveedor.objects.order_by('pk')
+    pagina = Paginator(proveedores, 20).get_page(request.GET.get('page'))
+    return render(request, 'proveedores/lista.html', {
+        'proveedores': pagina, 'page_obj': pagina,
+    })
 
 
 @admin_required

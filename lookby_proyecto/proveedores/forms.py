@@ -1,16 +1,29 @@
-import re
-
 from django import forms
+
+from usuarios.validators import (
+    normalizar_espacios,
+    validadores_correo,
+    validadores_telefono,
+)
 
 from .models import Proveedor, ProveedorProducto
 
 
 class ProveedorForm(forms.ModelForm):
-    """El modelo guarda correo como CharField; aquí se valida como email."""
+    """Correo y teléfono validados con las mismas reglas que el resto del proyecto."""
 
     correo = forms.EmailField(
         label='Correo electrónico',
+        max_length=150,
+        validators=validadores_correo(),
+        error_messages={'invalid': 'Escribe un correo electrónico válido.'},
         widget=forms.EmailInput(attrs={'placeholder': 'ventas@ejemplo.com'}),
+    )
+    telefono = forms.CharField(
+        label='Teléfono',
+        max_length=50,
+        validators=validadores_telefono(),
+        widget=forms.TextInput(attrs={'placeholder': 'Ej. 3019998888'}),
     )
 
     class Meta:
@@ -18,28 +31,12 @@ class ProveedorForm(forms.ModelForm):
         fields = ['nombre', 'telefono', 'correo']
         widgets = {
             'nombre': forms.TextInput(attrs={'placeholder': 'Ej. Distribuidora Belleza'}),
-            'telefono': forms.TextInput(attrs={'placeholder': 'Ej. 3019998888'}),
         }
 
     def clean(self):
         datos = super().clean()
-        nombre = (datos.get('nombre') or '').strip()
-        telefono = (datos.get('telefono') or '').strip()
-
-        if nombre:
-            datos['nombre'] = ' '.join(nombre.split())
-
-        if telefono:
-            if not re.fullmatch(r'[\d\s()+.\-]{7,25}', telefono):
-                self.add_error(
-                    'telefono',
-                    'Usa solo números, espacios y los símbolos + ( ) - .',
-                )
-            elif len(re.sub(r'\D', '', telefono)) < 7:
-                self.add_error('telefono', 'El teléfono debe tener al menos 7 dígitos.')
-            else:
-                datos['telefono'] = telefono
-
+        datos['nombre'] = normalizar_espacios(datos.get('nombre'))
+        datos['telefono'] = normalizar_espacios(datos.get('telefono')) or ''
         return datos
 
 
@@ -53,18 +50,22 @@ class ProveedorProductoForm(forms.ModelForm):
             'idProveedor': 'Proveedor',
             'precioMayoreo': 'Precio de mayoreo',
         }
+        # El precio hereda validadores_precio del modelo: 0 permitido, negativos no.
+        error_messages = {
+            'precioMayoreo': {
+                'min_value': 'El precio de mayoreo no puede ser negativo. Usa 0 si es gratuito.',
+                'max_value': 'El precio de mayoreo supera el máximo permitido.',
+                'decimal_places': 'El precio de mayoreo admite máximo 2 decimales.',
+            },
+        }
         widgets = {
-            'precioMayoreo': forms.NumberInput(attrs={'min': '0.01', 'step': '0.01'}),
+            'precioMayoreo': forms.NumberInput(attrs={'min': '0', 'step': '0.01'}),
         }
 
     def clean(self):
         datos = super().clean()
         proveedor = datos.get('idProveedor')
         producto = datos.get('producto')
-        precio = datos.get('precioMayoreo')
-
-        if precio is not None and precio <= 0:
-            self.add_error('precioMayoreo', 'El precio de mayoreo debe ser mayor que cero.')
 
         if proveedor is not None and producto is not None:
             repetidos = ProveedorProducto.objects.filter(

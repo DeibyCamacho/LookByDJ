@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.db.utils import DatabaseError
 from django.test import TestCase
 from django.urls import reverse
 
@@ -53,8 +54,6 @@ class MapaTests(TestCase):
         self.assertIsNone(datos['locales'][1]['calificacion'])
 
     def test_api_devuelve_lista_vacia_si_la_vista_no_existe(self):
-        from django.db.utils import DatabaseError
-
         with patch(
             'mapas.views.VwMapaLocales.objects.values',
             side_effect=DatabaseError('vw_mapa_locales no existe'),
@@ -69,3 +68,52 @@ class MapaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sin calificar')
         self.assertContains(response, 'LookBy Centro')
+
+    @patch('mapas.views.logger')
+    def test_fallo_de_bd_se_registra_y_no_se_expone(self, logger_mock):
+        with patch(
+            'mapas.views.VwMapaLocales.objects.values',
+            side_effect=DatabaseError('vw_mapa_locales secreto'),
+        ):
+            response = self.client.get(reverse('mapas:lista'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(logger_mock.error.called)
+        self.assertEqual(response.context['estado_mapa'], 'fallo')
+        self.assertContains(response, 'No pudimos consultar los datos del mapa')
+        self.assertNotContains(response, 'vw_mapa_locales secreto')
+
+    @patch('mapas.views.logger')
+    def test_api_publico_no_expone_trazas_aunque_falle_la_bd(self, logger_mock):
+        with patch(
+            'mapas.views.VwMapaLocales.objects.values',
+            side_effect=DatabaseError('detalle interno secreto'),
+        ):
+            response = self.client.get(reverse('mapas:api_locales'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'locales': []})
+        self.assertTrue(logger_mock.error.called)
+        self.assertNotIn('detalle interno secreto', response.content.decode())
+
+    def test_estado_sin_datos_es_distinto_de_fallo(self):
+        with patch('mapas.views.VwMapaLocales.objects.values', return_value=[]):
+            response = self.client.get(reverse('mapas:lista'))
+        self.assertEqual(response.context['estado_mapa'], 'sin_datos')
+        self.assertContains(response, 'Todavía no hay locales con coordenadas publicadas')
+        self.assertNotContains(response, 'No pudimos consultar los datos del mapa')
+
+        with patch('mapas.views.VwMapaLocales.objects.values', return_value=FILAS):
+            response = self.client.get(reverse('mapas:lista'))
+        self.assertEqual(response.context['estado_mapa'], 'ok')
+
+    def test_plantilla_tiene_referrer_policy_y_respaldo_seguro(self):
+        with patch('mapas.views.VwMapaLocales.objects.values', return_value=FILAS):
+            response = self.client.get(reverse('mapas:lista'))
+
+        self.assertContains(response, 'referrerPolicy')
+        self.assertContains(response, "on('tileerror'")
+        self.assertContains(response, 'createTextNode')
+        self.assertContains(response, 'aria-live')
+        self.assertContains(response, 'OpenStreetMap contributors')
+        self.assertNotContains(response, 'innerHTML')

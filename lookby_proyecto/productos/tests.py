@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
@@ -21,6 +22,8 @@ class _Base(TestCase):
         )
         rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
         self.admin.roles.add(rol)
+        # Administrador con propiedad sobre el local: puede gestionar el catálogo.
+        self.local.administradores.add(self.admin)
         self.cliente = Usuario.objects.create_user(
             correo='cliente@prueba.com', password='clave123', nombre='Cliente'
         )
@@ -89,6 +92,54 @@ class ProductoCRUDTests(_Base):
         form = ProductoForm({'nombre': '  champú  ', 'descripcion': '', 'categoria': ''})
         self.assertFalse(form.is_valid())
         self.assertIn('nombre', form.errors)
+
+    def test_descripcion_no_puede_superar_500_caracteres(self):
+        form = ProductoForm({
+            'nombre': 'Producto largo', 'descripcion': 'x' * 501, 'categoria': '',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('descripcion', form.errors)
+
+        producto = Producto.objects.create(nombre='Producto largo', descripcion='x' * 501)
+        with self.assertRaises(ValidationError):
+            producto.full_clean()
+
+    def test_admin_de_otro_local_no_puede_editar_producto(self):
+        producto = Producto.objects.create(nombre='Solo en Centro')
+        InventarioLocal.objects.create(
+            local=self.local, producto=producto,
+            precio_venta=Decimal('1000'), stock_actual=1,
+        )
+        otro_local = Local.objects.create(
+            nombre='Otro local', direccion='Calle 2', ciudad='Bogotá'
+        )
+        otro_admin = Usuario.objects.create_user(
+            correo='otro-admin@prueba.com', password='clave123', nombre='Otro'
+        )
+        rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
+        otro_admin.roles.add(rol)
+        otro_local.administradores.add(otro_admin)
+        self.client.force_login(otro_admin)
+
+        url = reverse('productos:editar', args=[producto.pk])
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.post(url, {'nombre': 'Cambiado'}).status_code, 403)
+        self.assertEqual(
+            self.client.post(reverse('productos:eliminar', args=[producto.pk])).status_code,
+            403,
+        )
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, 'Solo en Centro')
+        self.assertTrue(producto.activo)
+
+    def test_lista_productos_paginada_a_20(self):
+        for numero in range(21):
+            Producto.objects.create(nombre=f'Producto {numero}')
+
+        primera = self.client.get(reverse('productos:lista'))
+        self.assertEqual(len(primera.context['page_obj'].object_list), 20)
+        segunda = self.client.get(reverse('productos:lista') + '?page=2')
+        self.assertEqual(len(segunda.context['page_obj'].object_list), 1)
 
 
 class ProductoURLTests(_Base):

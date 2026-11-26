@@ -9,29 +9,30 @@ class InventarioForm(forms.ModelForm):
     class Meta:
         model = InventarioLocal
         fields = ['local', 'producto', 'precio_venta', 'stock_actual']
+        # Precio y stock heredan los validadores compartidos del modelo:
+        # precio >= 0 con 2 decimales y tope; stock entre 0 y 100000.
+        error_messages = {
+            'precio_venta': {
+                'min_value': 'El precio de venta no puede ser negativo. Usa 0 si es gratuito.',
+                'max_value': 'El precio de venta supera el máximo permitido.',
+                'decimal_places': 'El precio de venta admite máximo 2 decimales.',
+            },
+            'stock_actual': {
+                'min_value': 'El stock no puede ser negativo. Usa 0 si no hay existencias.',
+                'max_value': 'El stock no puede superar las 100000 unidades.',
+            },
+        }
         widgets = {
-            'precio_venta': forms.NumberInput(attrs={'min': '0.01', 'step': '0.01'}),
-            'stock_actual': forms.NumberInput(attrs={'min': '0', 'step': '1'}),
+            'precio_venta': forms.NumberInput(attrs={'min': '0', 'step': '0.01'}),
+            'stock_actual': forms.NumberInput(attrs={
+                'min': '0', 'max': '100000', 'step': '1',
+            }),
         }
 
     def clean(self):
         datos = super().clean()
         local = datos.get('local')
         producto = datos.get('producto')
-        precio = datos.get('precio_venta')
-        stock = datos.get('stock_actual')
-
-        if stock is not None and stock < 0:
-            self.add_error(
-                'stock_actual',
-                'El stock no puede ser negativo. Usa 0 si no hay existencias.',
-            )
-
-        if precio is not None and precio <= 0:
-            self.add_error(
-                'precio_venta',
-                'El precio de venta debe ser mayor que cero.',
-            )
 
         # El modelo ya tiene unique_together; aquí damos un mensaje legible.
         if local is not None and producto is not None:

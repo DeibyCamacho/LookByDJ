@@ -1,6 +1,9 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from inventario.models import InventarioLocal
@@ -8,7 +11,7 @@ from locales.models import Local
 from productos.models import Producto
 from usuarios.models import Rol, Usuario
 
-from .forms import CatalogoProductoForm
+from .forms import CatalogoForm, CatalogoProductoForm
 from .models import Catalogo, CatalogoProducto
 
 
@@ -32,6 +35,9 @@ class CatalogoCRUDTests(TestCase):
         )
         rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
         self.admin.roles.add(rol)
+        # Dueño del local: las vistas ahora exigen propiedad para escribir.
+        self.local.usuario = self.admin
+        self.local.save(update_fields=['usuario'])
         self.cliente = Usuario.objects.create_user(
             correo='cliente@prueba.com', password='clave123', nombre='Cliente'
         )
@@ -129,3 +135,66 @@ class CatalogoCRUDTests(TestCase):
         )
         self.assertEqual(r.status_code, 302)
         self.assertTrue(Catalogo.objects.filter(pk=self.catalogo.pk).exists())
+
+    def test_descripcion_no_puede_superar_500_caracteres(self):
+        form = CatalogoForm({
+            'nombre': 'Catálogo extenso', 'descripcion': 'x' * 501,
+            'local': self.local.pk,
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('descripcion', form.errors)
+
+        self.catalogo.descripcion = 'x' * 501
+        with self.assertRaises(ValidationError):
+            self.catalogo.full_clean()
+
+    def test_admin_de_otro_local_no_puede_gestionar_catalogo(self):
+        otro_admin = Usuario.objects.create_user(
+            correo='otro-admin@prueba.com', password='clave123', nombre='Otro',
+        )
+        rol, _ = Rol.objects.get_or_create(nombre=Rol.ADMINISTRADOR)
+        otro_admin.roles.add(rol)
+        self.otro_local.usuario = otro_admin
+        self.otro_local.save(update_fields=['usuario'])
+        self.client.force_login(otro_admin)
+
+        self.assertEqual(
+            self.client.post(reverse('catalogos:crear'), {
+                'nombre': 'Ajeno', 'descripcion': '', 'local': self.local.pk,
+            }).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(reverse('catalogos:editar', args=[self.catalogo.pk])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('catalogos:eliminar', args=[self.catalogo.pk])
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse('catalogos:producto_crear', args=[self.catalogo.pk])
+            ).status_code,
+            403,
+        )
+        self.assertTrue(Catalogo.objects.filter(pk=self.catalogo.pk).exists())
+
+    def test_lista_catalogos_paginada_y_sin_n_plus_one(self):
+        for numero in range(21):
+            Catalogo.objects.create(
+                nombre=f'Catálogo {numero}', local=self.local,
+                descripcion='Catálogo de prueba',
+            )
+        with CaptureQueriesContext(connection) as consultas:
+            primera = self.client.get(reverse('catalogos:lista'))
+        self.assertEqual(len(primera.context['page_obj'].object_list), 20)
+        # Un COUNT por fila daría al menos 20 consultas extra.
+        self.assertLess(len(consultas), 15)
+        self.assertContains(primera, 'Página 1 de 2')
+
+        segunda = self.client.get(reverse('catalogos:lista') + '?page=2')
+        self.assertEqual(len(segunda.context['page_obj'].object_list), 2)
+        self.assertEqual(primera.context['catalogos'][0].num_productos, 0)

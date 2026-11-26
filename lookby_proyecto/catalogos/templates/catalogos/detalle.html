@@ -8,9 +8,10 @@
   <p>{{ catalogo.descripcion|default:"Sin descripción." }}</p>
 
   <h3>Productos del catálogo</h3>
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Productos del catálogo">
   <table>
     <thead>
-      <tr><th>Producto</th><th>Stock disponible</th><th>Precio de venta</th><th>Acciones</th></tr>
+      <tr><th scope="col">Producto</th><th scope="col">Stock disponible</th><th scope="col">Precio de venta</th><th scope="col">Acciones</th></tr>
     </thead>
     <tbody>
       {% for item in items %}
@@ -26,10 +27,11 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="4">Este catálogo aún no tiene productos.</td></tr>
+        <tr><td class="estado-vacio" colspan="4">Este catálogo aún no tiene productos.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
   {% if user|es_admin %}
     <p>

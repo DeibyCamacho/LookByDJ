@@ -11,8 +11,9 @@
       - {{ proveedor.telefono }} - {{ proveedor.correo }}
     </li>
   {% empty %}
-    <li>Aún no hay proveedores registrados.</li>
+    <li class="estado-vacio">Aún no hay proveedores registrados.</li>
   {% endfor %}
 </ul>
+{% include 'catalogos/_paginacion.html' %}
 </div>
 {% endblock %}
