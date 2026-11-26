@@ -37,6 +37,35 @@ body {
     color: var(--black);
 }
 
+/* Evita que palabras largas (URLs, correos, nombres sin espacios) rompan el layout. */
+.main-card,
+.contenido,
+.contenido p,
+.contenido ul li,
+.contenido th,
+.contenido td,
+.contenido form,
+.tarjeta-acceso,
+.floating-card,
+.card,
+.tarjeta,
+.mensajes li,
+.badge {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Foco visible para navegación con teclado en enlaces y controles. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--purple-dark);
+    outline-offset: 3px;
+}
+
 
 /* =================================
    CONTENEDOR EXTERIOR
@@ -495,6 +524,8 @@ body {
 
     .main-card {
         padding: 25px;
+        /* La altura fija de escritorio deja huecos enormes en pantallas pequeñas. */
+        min-height: 0;
     }
 
     .hero {
@@ -808,9 +839,72 @@ body {
     padding: 0;
     background: none;
     border: 0;
-    color: #B42318;
+    color: #8C1D13;
     font-size: 12px;
     font-weight: 600;
+}
+
+/* Errores de validación: el texto lo sigue generando el formulario. */
+.contenido form .errorlist {
+    display: grid;
+    gap: 4px;
+    margin: 6px 0 10px;
+    padding: 9px 12px;
+    background: #FFF3F1;
+    border: 1px solid #F6C9C2;
+    border-left: 4px solid #B42318;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.contenido form .errorlist li::before {
+    content: "\26A0\FE0F ";
+}
+
+/* Mensajes de error/avisos visibles (p. ej. el banner del mapa). */
+.mensajes li.error,
+.mensajes li.errorlist,
+.aviso-error,
+.mensaje-error {
+    background: #FFF3F1;
+    border: 1px solid #F6C9C2;
+    border-left: 4px solid #B42318;
+    color: #8C1D13;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.aviso-error,
+.mensaje-error {
+    margin: 12px 0 18px;
+}
+
+/* Contador de caracteres insertado junto a los textarea con maxlength. */
+.contador-caracteres {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: right;
+    color: var(--gray);
+}
+
+.contador-caracteres.contador-limite {
+    color: #8C1D13;
+    font-weight: 700;
+}
+
+/* Resúmenes recortados en tarjetas de lista: el enlace al detalle sigue visible. */
+.linea-limitada {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .contenido form .acciones {
@@ -889,6 +983,83 @@ body {
     background: #FBF8FE;
 }
 
+/* Contenedor con desplazamiento horizontal para tablas anchas. */
+.tabla-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 14px;
+}
+
+.tabla-scroll:focus-visible {
+    outline: 2px solid var(--purple-dark);
+    outline-offset: 2px;
+}
+
+.tabla-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.tabla-scroll::-webkit-scrollbar-thumb {
+    background: #CDB8E4;
+    border-radius: 8px;
+}
+
+/* Estado vacío de listados y tablas. */
+.contenido td.estado-vacio,
+.contenido ul li.estado-vacio,
+.contenido .estado-vacio {
+    text-align: center;
+    color: var(--gray);
+    font-style: italic;
+    font-weight: 400;
+    padding: 22px 16px;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+/* Paginación de listados. */
+.paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 24px 0 8px;
+}
+
+.paginacion a,
+.paginacion span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px 13px;
+    border: 1px solid #D8D2DF;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--purple-dark);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.paginacion a:hover {
+    background: #F3E9FC;
+    border-color: var(--purple);
+}
+
+.paginacion .actual {
+    background: var(--purple-dark);
+    border-color: var(--purple-dark);
+    color: white;
+}
+
+.paginacion .deshabilitado {
+    opacity: 0.55;
+}
+
 .badge {
     display: inline-block;
     border-radius: 20px;
@@ -907,6 +1078,53 @@ body {
 .badge.warn {
     background: #FEF3C7;
     color: #B45309;
+}
+
+/* Tablets y móviles: tablas desplazables y navegación sin desbordar. */
+@media (max-width: 768px) {
+
+    .main-card {
+        min-height: 0;
+        padding: 20px;
+    }
+
+    .tabla-scroll {
+        overflow-x: auto;
+    }
+
+    .tabla-scroll table {
+        min-width: 480px;
+    }
+
+    .contenido th,
+    .contenido td {
+        padding: 10px 11px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .navbar {
+        gap: 12px;
+    }
+
+    .nav-links {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .nav-links a {
+        white-space: nowrap;
+    }
+
+    .nav-actions {
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    .paginacion {
+        gap: 6px;
+    }
 }
 
 @media (max-width: 700px) {

@@ -5,6 +5,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Evita el 403 de los tiles de OpenStreetMap al venir de HTTPS. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>{% block title %}LookBy | Encuentra tu estilo{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'inicio/css/home.css' %}?v=3">
@@ -45,6 +47,7 @@
                 <div class="nav-actions">
                     {% if user.is_authenticated %}
                         <a href="{% url 'usuarios:perfil' %}" class="btn-start">Mi perfil</a>
+                        <a href="{% url 'usuarios:cambiar_clave' %}">Cambiar contraseña</a>
                         <form method="post" action="{% url 'usuarios:salir' %}" class="logout-form">
                             {% csrf_token %}
                             <button type="submit" class="btn-salir">Salir</button>
@@ -57,7 +60,7 @@
             </header>
 
             {% if messages %}
-                <ul class="mensajes">
+                <ul class="mensajes" aria-live="polite">
                     {% for mensaje in messages %}
                         <li class="{{ mensaje.tags }}">{{ mensaje }}</li>
                     {% endfor %}
@@ -74,6 +77,30 @@
     </footer>
 
 {% block extra_js %}{% endblock %}
+
+{# Contador accesible para todos los textareas con límite definido en el form. #}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Los errores de campo deben anunciarse a lectores de pantalla.
+  document.querySelectorAll('.errorlist').forEach(function (lista) {
+    lista.setAttribute('role', 'alert');
+  });
+  document.querySelectorAll('textarea[maxlength]').forEach(function (area) {
+    var maximo = Number(area.getAttribute('maxlength'));
+    if (!maximo) { return; }
+    var contador = document.createElement('small');
+    contador.className = 'contador-caracteres';
+    contador.setAttribute('aria-live', 'polite');
+    area.insertAdjacentElement('afterend', contador);
+    function actualizar() {
+      contador.textContent = area.value.length + ' / ' + maximo + ' caracteres';
+      contador.classList.toggle('contador-limite', area.value.length >= maximo);
+    }
+    area.addEventListener('input', actualizar);
+    actualizar();
+  });
+});
+</script>
 
 </body>
 </html>
