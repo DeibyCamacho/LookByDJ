@@ -3,6 +3,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
+from usuarios.validators import COMENTARIO_MAX, validador_texto_largo
+
 
 class Calificacion(models.Model):
     idCalificacion = models.AutoField(primary_key=True)
@@ -10,7 +12,10 @@ class Calificacion(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)],
         help_text='Puntuación de 1 a 5',
     )
-    comentario = models.TextField()
+    comentario = models.TextField(
+        validators=[validador_texto_largo(COMENTARIO_MAX)],
+        help_text=f'Máximo {COMENTARIO_MAX} caracteres.',
+    )
 
     # MER: CALIFICACION.idCliente / idLocal / idProfesional como llaves foráneas.
     cliente = models.ForeignKey(

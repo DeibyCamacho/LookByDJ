@@ -7,9 +7,10 @@
   <p><strong>Fecha:</strong> {{ pedido.fecha_creacion|date:"d/m/Y H:i" }} &middot; <strong>Estado:</strong> {{ pedido.get_estado_display }}</p>
   <p><strong>Dirección de entrega:</strong> {{ pedido.direccion_entrega|default:"No indicada" }}</p>
 
+  <div class="tabla-scroll" tabindex="0" role="region" aria-label="Productos del pedido">
   <table>
     <thead>
-      <tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr>
+      <tr><th scope="col">Producto</th><th scope="col">Cantidad</th><th scope="col">Precio unitario</th><th scope="col">Subtotal</th></tr>
     </thead>
     <tbody>
       {% for detalle in pedido.detalles.all %}
@@ -20,13 +21,14 @@
           <td>${{ detalle.subtotal }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="4">Este pedido no tiene productos.</td></tr>
+        <tr><td class="estado-vacio" colspan="4">Este pedido no tiene productos.</td></tr>
       {% endfor %}
     </tbody>
     <tfoot>
-      <tr><th colspan="3">Total</th><th>${{ pedido.total }}</th></tr>
+      <tr><th scope="row" colspan="3">Total</th><th scope="row">${{ pedido.total }}</th></tr>
     </tfoot>
   </table>
+  </div>
 
   <div class="acciones">
     <a class="btn-secundario" href="{% url 'pedidos:lista' %}">Volver a pedidos</a>

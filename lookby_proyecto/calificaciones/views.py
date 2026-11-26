@@ -5,14 +5,13 @@ from django.db import IntegrityError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from usuarios.permisos import es_admin
-
 from .forms import CalificacionForm
 from .models import Calificacion
 
 
-def _puede_editar(request, calificacion):
-    return calificacion.cliente_id == request.user.pk or es_admin(request.user)
+def _es_autor(request, calificacion):
+    """Solo el cliente que escribió la calificación puede cambiarla."""
+    return calificacion.cliente_id == request.user.pk
 
 
 def lista_calificaciones(request):
@@ -64,19 +63,19 @@ def detalle_calificacion(request, pk):
 @login_required
 def editar_calificacion(request, pk):
     calificacion = get_object_or_404(Calificacion, pk=pk)
-    if not _puede_editar(request, calificacion):
+    if not _es_autor(request, calificacion):
         raise Http404('No puedes editar esta calificación.')
 
     if request.method == 'POST':
         form = CalificacionForm(
-            request.POST, instance=calificacion, cliente=request.user
+            request.POST, instance=calificacion, cliente=calificacion.cliente
         )
         if form.is_valid():
             form.save()
             messages.success(request, 'Calificación actualizada.')
             return redirect('calificaciones:detalle', pk=calificacion.pk)
     else:
-        form = CalificacionForm(instance=calificacion, cliente=request.user)
+        form = CalificacionForm(instance=calificacion, cliente=calificacion.cliente)
     return render(request, 'calificaciones/editar.html', {
         'form': form,
         'calificacion': calificacion,
@@ -86,7 +85,7 @@ def editar_calificacion(request, pk):
 @login_required
 def eliminar_calificacion(request, pk):
     calificacion = get_object_or_404(Calificacion, pk=pk)
-    if not _puede_editar(request, calificacion):
+    if not _es_autor(request, calificacion):
         raise Http404('No puedes eliminar esta calificación.')
 
     if request.method == 'POST':

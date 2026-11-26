@@ -23,10 +23,13 @@ def _validar_no_pasada(inicio):
 
 
 def _validar_horario(oferta, inicio, fin):
-    """Solo exige horario cuando el profesional tiene horarios definidos."""
+    """La cita debe caer dentro de un horario publicado por el profesional."""
     horarios = Horario.objects.filter(profesional=oferta.profesional)
     if not horarios.exists():
-        return
+        raise ValidationError(
+            'El profesional todavía no tiene horarios publicados. '
+            'No se puede reservar hasta que publique su horario de atención.'
+        )
 
     if inicio.date() != fin.date():
         raise ValidationError('La cita debe completarse dentro de un mismo día.')
@@ -122,3 +125,14 @@ def reprogramar_cita(cita, oferta=None, fecha_inicio=None):
     cita.full_clean()
     cita.save()
     return cita
+
+
+@transaction.atomic
+def cancelar_cita(cita):
+    """Cancela conservando el historial, con la fila bloqueada como al reprogramar."""
+    cita_bloqueada = Cita.objects.select_for_update().get(pk=cita.pk)
+    if cita_bloqueada.estado in ('COMPLETADA', 'CANCELADA'):
+        raise ValidationError('Solo se pueden cancelar citas pendientes o confirmadas.')
+    cita_bloqueada.estado = 'CANCELADA'
+    cita_bloqueada.save(update_fields=['estado'])
+    return cita_bloqueada

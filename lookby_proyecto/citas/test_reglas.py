@@ -28,7 +28,18 @@ class CrearCitaTests(TestCase):
             servicio=servicio, profesional=self.profesional,
             duracion=60, precio=50000,
         )
-        self.inicio = timezone.now().replace(microsecond=0) + timedelta(days=1)
+        # Antes las pruebas reservaban sin horario; ahora la regla lo exige,
+        # así que se crean horarios válidos para los días usados por la suite.
+        for offset in range(1, 8):
+            dia = timezone.localdate() + timedelta(days=offset)
+            Horario.objects.create(
+                profesional=self.profesional,
+                dia_semana=dia.isoweekday(),
+                hora_inicio=time(9, 0),
+                hora_fin=time(12, 0),
+            )
+        dia = timezone.localdate() + timedelta(days=1)
+        self.inicio = timezone.make_aware(datetime.combine(dia, time(10, 0)))
         self.fin = self.inicio + timedelta(minutes=60)
 
     def test_crea_cita_y_toma_precio_de_la_oferta(self):
@@ -54,7 +65,8 @@ class CrearCitaTests(TestCase):
 
     def test_formulario_web_reserva_cita(self):
         self.client.force_login(self.cliente)
-        fecha = timezone.localtime(timezone.now() + timedelta(days=3))
+        dia = timezone.localdate() + timedelta(days=3)
+        fecha = timezone.make_aware(datetime.combine(dia, time(10, 0)))
         response = self.client.post('/citas/crear/', {
             'oferta': self.oferta.pk,
             'fecha_inicio': fecha.strftime('%Y-%m-%dT%H:%M'),
@@ -72,6 +84,8 @@ class CrearCitaTests(TestCase):
         self.assertEqual(Cita.objects.count(), 0)
 
     def test_valida_horario_del_profesional_cuando_existe(self):
+        # Se quitan los horarios de la fixture para probar un intervalo concreto.
+        self.profesional.horarios.all().delete()
         dia = timezone.localdate() + timedelta(days=3)
         Horario.objects.create(
             profesional=self.profesional,
@@ -93,6 +107,23 @@ class CrearCitaTests(TestCase):
         cita.refresh_from_db()
         self.assertEqual(cita.fecha_inicio, nuevo_inicio)
         self.assertEqual(cita.fecha_fin, nuevo_inicio + timedelta(minutes=60))
+
+    def test_rechaza_cita_sin_horario_publicado(self):
+        self.profesional.horarios.all().delete()
+        with self.assertRaises(ValidationError) as error:
+            crear_cita(self.cliente, self.oferta, self.inicio, self.fin)
+        self.assertIn('horarios', str(error.exception))
+        self.assertEqual(Cita.objects.count(), 0)
+
+    def test_rechaza_reprogramacion_sin_horario_publicado(self):
+        cita = crear_cita(self.cliente, self.oferta, self.inicio, self.fin)
+        self.profesional.horarios.all().delete()
+        with self.assertRaises(ValidationError) as error:
+            reprogramar_cita(
+                cita, oferta=self.oferta,
+                fecha_inicio=self.inicio + timedelta(days=1),
+            )
+        self.assertIn('horarios', str(error.exception))
 
 
 class PermisosCitasTests(TestCase):
@@ -116,7 +147,16 @@ class PermisosCitasTests(TestCase):
             servicio=servicio, profesional=profesional, duracion=60, precio=20000,
         )
         self.oferta = oferta
-        base = timezone.now().replace(microsecond=0) + timedelta(days=2)
+        for offset in range(2, 9):
+            dia = timezone.localdate() + timedelta(days=offset)
+            Horario.objects.create(
+                profesional=profesional,
+                dia_semana=dia.isoweekday(),
+                hora_inicio=time(9, 0),
+                hora_fin=time(12, 0),
+            )
+        dia = timezone.localdate() + timedelta(days=2)
+        base = timezone.make_aware(datetime.combine(dia, time(10, 0)))
         self.cita = Cita.objects.create(
             cliente=self.cliente, oferta=oferta,
             fecha_inicio=base, fecha_fin=base + timedelta(minutes=60),
@@ -182,3 +222,42 @@ class PermisosCitasTests(TestCase):
         self.client.force_login(self.cliente)
         response = self.client.get(f'/citas/{self.cita_ajena.pk}/')
         self.assertEqual(response.status_code, 404)
+
+    def test_cliente_puede_cancelar_su_cita(self):
+        self.client.force_login(self.cliente)
+        respuesta = self.client.post(f'/citas/{self.cita.pk}/cancelar/')
+        self.assertRedirects(respuesta, '/citas/', fetch_redirect_response=False)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'CANCELADA')
+
+    def test_profesional_no_cancela_cita_ajena(self):
+        self.client.force_login(self.usuario_pro)
+        respuesta = self.client.post(f'/citas/{self.cita.pk}/cancelar/')
+        self.assertEqual(respuesta.status_code, 404)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'PENDIENTE')
+
+    def test_admin_no_cancela_cita_ajena(self):
+        self.client.force_login(self.admin)
+        respuesta = self.client.post(f'/citas/{self.cita.pk}/cancelar/')
+        self.assertEqual(respuesta.status_code, 404)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'PENDIENTE')
+
+    def test_profesional_no_reprograma_cita_ajena(self):
+        self.client.force_login(self.usuario_pro)
+        respuesta = self.client.post(f'/citas/{self.cita.pk}/editar/', {
+            'oferta': self.oferta.pk,
+            'fecha_inicio': (
+                self.cita.fecha_inicio + timedelta(days=3)
+            ).strftime('%Y-%m-%dT%H:%M'),
+        })
+        self.assertEqual(respuesta.status_code, 404)
+        self.cita.refresh_from_db()
+        self.assertEqual(self.cita.estado, 'PENDIENTE')
+
+    def test_profesional_ve_detalle_ajeno_pero_no_botones_de_cambio(self):
+        self.client.force_login(self.usuario_pro)
+        respuesta = self.client.get(f'/citas/{self.cita.pk}/')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotContains(respuesta, 'Reprogramar')

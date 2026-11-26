@@ -1,6 +1,12 @@
 from django.conf import settings
 from django.db import models
 
+from usuarios.validators import (
+    DIRECCION_MAX,
+    validadores_cantidad,
+    validadores_direccion,
+)
+
 
 class Pedido(models.Model):
     ESTADOS = [
@@ -25,7 +31,15 @@ class Pedido(models.Model):
     )
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
-    direccion_entrega = models.CharField('dirección de entrega', max_length=255, blank=True)
+    direccion_entrega = models.CharField(
+        'dirección de entrega',
+        max_length=DIRECCION_MAX,
+        validators=validadores_direccion(),
+        help_text=(
+            'Obligatoria. Entre 10 y 150 caracteres, con letras y al menos un '
+            'número. Ejemplo: Calle 50 # 43-20, Medellín.'
+        ),
+    )
     estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
 
@@ -46,7 +60,11 @@ class DetallePedido(models.Model):
         related_name='detalles_pedido',
         db_column='idInventario',
     )
-    cantidad = models.PositiveIntegerField(default=1)
+    cantidad = models.PositiveIntegerField(
+        default=1,
+        validators=validadores_cantidad(),
+        help_text='Entre 1 y 1000 unidades por producto.',
+    )
     precio_unitario = models.DecimalField(
         max_digits=10, decimal_places=2,
         help_text='Precio fijado en el momento de la compra',

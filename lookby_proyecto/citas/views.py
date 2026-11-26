@@ -12,8 +12,14 @@ from profesionales.models import Profesional
 
 from .forms import CrearCitaForm, ReprogramarCitaForm
 from .models import Cita
+from .services import cancelar_cita as cancelar_cita_servicio
 from .services import crear_cita as reservar_cita
 from .services import reprogramar_cita
+
+
+def _cita_del_cliente(request, pk):
+    """Ver es para todos los roles; modificar solo para quien reservó."""
+    return get_object_or_404(Cita, pk=pk, cliente=request.user)
 
 
 def citas_visibles(usuario):
@@ -64,7 +70,10 @@ def detalle_cita(request, pk):
         'citas/detalle.html',
         {
             'cita': cita,
-            'puede_cambiar': cita.estado in ('PENDIENTE', 'CONFIRMADA'),
+            'puede_cambiar': (
+                cita.cliente_id == request.user.pk
+                and cita.estado in ('PENDIENTE', 'CONFIRMADA')
+            ),
         },
     )
 
@@ -72,7 +81,7 @@ def detalle_cita(request, pk):
 @login_required
 def editar_cita(request, pk):
     """Reprograma una cita pendiente o confirmada usando services.py."""
-    cita = get_object_or_404(citas_visibles(request.user), pk=pk)
+    cita = _cita_del_cliente(request, pk)
     if cita.estado not in ('PENDIENTE', 'CONFIRMADA'):
         messages.error(request, 'Esa cita no se puede reprogramar.')
         return redirect('citas:detalle', pk=pk)
@@ -101,11 +110,11 @@ def editar_cita(request, pk):
 @require_POST
 def cancelar_cita(request, pk):
     """Cancela conservando la cita en el historial (no se borra)."""
-    cita = get_object_or_404(citas_visibles(request.user), pk=pk)
-    if cita.estado in ('COMPLETADA', 'CANCELADA'):
-        messages.error(request, 'Solo se pueden cancelar citas pendientes o confirmadas.')
+    cita = _cita_del_cliente(request, pk)
+    try:
+        cancelar_cita_servicio(cita)
+    except ValidationError as exc:
+        messages.error(request, exc.messages[0])
         return redirect('citas:detalle', pk=pk)
-    cita.estado = 'CANCELADA'
-    cita.save(update_fields=['estado'])
     messages.success(request, 'La cita fue cancelada.')
     return redirect('citas:lista')

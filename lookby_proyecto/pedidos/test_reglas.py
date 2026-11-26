@@ -12,8 +12,10 @@ from usuarios.models import Usuario
 
 from .admin import DetallePedidoInline, PedidoAdmin
 from .forms import CrearPedidoForm
-from .models import Pedido
+from .models import DetallePedido, Pedido
 from .services import cancelar_pedido, crear_pedido
+
+DIRECCION_VALIDA = 'Calle 5 # 6-7'
 
 
 class CrearPedidoTests(TestCase):
@@ -50,6 +52,7 @@ class CrearPedidoTests(TestCase):
             crear_pedido(
                 self.cliente,
                 self.local,
+                direccion_entrega=DIRECCION_VALIDA,
                 items=[{'inventario_id': self.inventario.pk, 'cantidad': 99}],
             )
         self.inventario.refresh_from_db()
@@ -57,7 +60,10 @@ class CrearPedidoTests(TestCase):
 
     def test_rechaza_pedido_vacio(self):
         with self.assertRaises(ValidationError):
-            crear_pedido(self.cliente, self.local, items=[])
+            crear_pedido(
+                self.cliente, self.local,
+                direccion_entrega=DIRECCION_VALIDA, items=[],
+            )
 
     def test_formulario_web_crea_pedido(self):
         self.client.force_login(self.cliente)
@@ -90,6 +96,7 @@ class CrearPedidoTests(TestCase):
             'local': self.local.pk,
             'inventario': otro_inventario.pk,
             'cantidad': 1,
+            'direccion_entrega': DIRECCION_VALIDA,
         })
         self.assertFalse(form.is_valid())
         self.assertIn('inventario', form.errors)
@@ -102,6 +109,7 @@ class CrearPedidoTests(TestCase):
             'local': self.local.pk,
             'inventario': otro_inventario.pk,
             'cantidad': 1,
+            'direccion_entrega': DIRECCION_VALIDA,
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'otro local')
@@ -116,10 +124,12 @@ class CrearPedidoTests(TestCase):
         )
         mio = crear_pedido(
             self.cliente, self.local,
+            direccion_entrega=DIRECCION_VALIDA,
             items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
         )
         ajeno = crear_pedido(
             otro_cliente, self.local,
+            direccion_entrega=DIRECCION_VALIDA,
             items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
         )
 
@@ -144,6 +154,7 @@ class CrearPedidoTests(TestCase):
     def test_admin_no_puede_borrar_pedido_confirmado(self):
         pedido = crear_pedido(
             self.cliente, self.local,
+            direccion_entrega=DIRECCION_VALIDA,
             items=[{'inventario_id': self.inventario.pk, 'cantidad': 2}],
         )
         admin_user = Usuario.objects.create_superuser(
@@ -167,6 +178,7 @@ class CrearPedidoTests(TestCase):
     def test_admin_puede_cancelar_en_lugar_de_borrar(self):
         pedido = crear_pedido(
             self.cliente, self.local,
+            direccion_entrega=DIRECCION_VALIDA,
             items=[{'inventario_id': self.inventario.pk, 'cantidad': 2}],
         )
         admin_user = Usuario.objects.create_superuser(
@@ -217,8 +229,131 @@ class CrearPedidoTests(TestCase):
     def test_cancelar_pedido_ya_cancelado_falla(self):
         pedido = crear_pedido(
             self.cliente, self.local,
+            direccion_entrega=DIRECCION_VALIDA,
             items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
         )
         cancelar_pedido(pedido)
         with self.assertRaises(ValidationError):
             cancelar_pedido(pedido)
+
+    def test_form_exige_direccion_y_rechaza_texto_sin_numero(self):
+        datos = {
+            'local': self.local.pk,
+            'inventario': self.inventario.pk,
+            'cantidad': 1,
+        }
+        form = CrearPedidoForm(datos)
+        self.assertFalse(form.is_valid())
+        self.assertIn('direccion_entrega', form.errors)
+
+        form = CrearPedidoForm({**datos, 'direccion_entrega': 'mhv mvjhgm'})
+        self.assertFalse(form.is_valid())
+        self.assertIn('direccion_entrega', form.errors)
+        self.assertIn('dirección válida', str(form.errors['direccion_entrega']))
+
+        self.client.force_login(self.cliente)
+        respuesta = self.client.post('/pedidos/crear/', {
+            **datos, 'direccion_entrega': 'mhv mvjhgm',
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'dirección válida')
+        self.assertEqual(Pedido.objects.count(), 0)
+
+    def test_form_rechaza_cantidad_mayor_a_mil(self):
+        self.inventario.stock_actual = 2000
+        self.inventario.save(update_fields=['stock_actual'])
+        form = CrearPedidoForm({
+            'local': self.local.pk,
+            'inventario': self.inventario.pk,
+            'cantidad': 1001,
+            'direccion_entrega': DIRECCION_VALIDA,
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('cantidad', form.errors)
+        self.assertIn('1000', str(form.errors['cantidad']))
+
+    def test_modelo_valida_direccion_y_cantidad(self):
+        pedido = Pedido(
+            cliente=self.cliente, local=self.local,
+            direccion_entrega='mhv mvjhgm', total=0,
+        )
+        with self.assertRaises(ValidationError):
+            pedido.full_clean()
+
+        pedido.direccion_entrega = DIRECCION_VALIDA
+        pedido.save()
+        detalle = DetallePedido(
+            pedido=pedido, inventario=self.inventario,
+            cantidad=1001, precio_unitario=Decimal('25.50'),
+        )
+        with self.assertRaises(ValidationError):
+            detalle.full_clean()
+
+    def test_servicio_exige_direccion_y_rechaza_texto_sin_numero(self):
+        for direccion in ('', '   ', 'mhv mvjhgm'):
+            with self.subTest(direccion=direccion):
+                with self.assertRaises(ValidationError):
+                    crear_pedido(
+                        self.cliente, self.local,
+                        direccion_entrega=direccion,
+                        items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
+                    )
+        self.assertEqual(Pedido.objects.count(), 0)
+
+    def test_servicio_rechaza_local_inactivo(self):
+        self.local.activo = False
+        self.local.save(update_fields=['activo'])
+        with self.assertRaises(ValidationError) as error:
+            crear_pedido(
+                self.cliente, self.local,
+                direccion_entrega=DIRECCION_VALIDA,
+                items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
+            )
+        self.assertIn('no está activo', str(error.exception))
+        self.assertEqual(Pedido.objects.count(), 0)
+        self.inventario.refresh_from_db()
+        self.assertEqual(self.inventario.stock_actual, 10)
+
+    def test_servicio_rechaza_producto_inactivo(self):
+        producto = self.inventario.producto
+        producto.activo = False
+        producto.save(update_fields=['activo'])
+        with self.assertRaises(ValidationError) as error:
+            crear_pedido(
+                self.cliente, self.local,
+                direccion_entrega=DIRECCION_VALIDA,
+                items=[{'inventario_id': self.inventario.pk, 'cantidad': 1}],
+            )
+        self.assertIn('no está activo', str(error.exception))
+        self.assertEqual(Pedido.objects.count(), 0)
+        self.inventario.refresh_from_db()
+        self.assertEqual(self.inventario.stock_actual, 10)
+
+    def test_servicio_rechaza_cantidad_mayor_a_mil(self):
+        self.inventario.stock_actual = 2000
+        self.inventario.save(update_fields=['stock_actual'])
+        with self.assertRaises(ValidationError) as error:
+            crear_pedido(
+                self.cliente, self.local,
+                direccion_entrega=DIRECCION_VALIDA,
+                items=[{'inventario_id': self.inventario.pk, 'cantidad': 1001}],
+            )
+        self.assertIn('1000', str(error.exception))
+        self.assertEqual(Pedido.objects.count(), 0)
+        self.inventario.refresh_from_db()
+        self.assertEqual(self.inventario.stock_actual, 2000)
+
+    def test_editar_direccion_exige_direccion_valida(self):
+        pedido = Pedido.objects.create(
+            cliente=self.cliente, local=self.local,
+            direccion_entrega=DIRECCION_VALIDA, total=0,
+        )
+        self.client.force_login(self.cliente)
+        respuesta = self.client.post(
+            reverse('pedidos:editar', args=[pedido.pk]),
+            {'direccion_entrega': 'mhv mvjhgm'},
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'dirección válida')
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.direccion_entrega, DIRECCION_VALIDA)
